@@ -53,20 +53,59 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
     @Override
     @Transactional
     public Long createProcessInstance(ProcessInstanceCreateRequest request) {
-        // 查找流程定义
-        ProcessDefinition processDefinition = processDefinitionRepository.findById(request.getProcessDefinitionId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_DEFINITION_NOT_FOUND));
-        // 查找开始节点定义
-        ApprovalNodeDefinition startNodeDef = nodeDefinitionRepository.findByProcessDefinitionIdAndIsStartNode(
-                processDefinition.getId(), 1)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND, "流程定义中未找到开始节点"));
+        // 查找流程定义和开始节点定义
+        ProcessDefinition processDefinition = findAndValidateProcessDefinition(request.getProcessDefinitionId());
+        ApprovalNodeDefinition startNodeDef = findStartNodeDefinition(processDefinition.getId());
 
+        // 创建流程实例
+        ProcessInstance instance = createProcessInstanceEntity(request, processDefinition, startNodeDef);
+        
+        // 创建开始节点实例
+        ProcessNodeInstance startNodeInstance = createStartNodeInstance(instance, startNodeDef, request.getApplyUserName());
+        
+        // 创建开始节点的审批人实例（申请人自己）
+        createStartNodeApproverInstance(startNodeInstance, request.getApplyUserId(), request.getApplyUserName());
+        
+        // 保存预选审批人（如果有）
+        savePreselectedApprovers(instance.getId(), request.getPreselectedApprovers());
+
+        // 记录操作日志
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        String currentUsername = SecurityUtil.getCurrentUsername();
+        createOperationLog(instance.getId(), null, OperationType.CREATE, currentUserId, currentUsername);
+
+        return instance.getId();
+    }
+    
+    /**
+     * 查找并验证流程定义
+     */
+    private ProcessDefinition findAndValidateProcessDefinition(Long processDefinitionId) {
+        ProcessDefinition processDefinition = processDefinitionRepository.findById(processDefinitionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_DEFINITION_NOT_FOUND));
+                
         // 检查流程状态，只有ACTIVE状态的流程才能发起
         if (processDefinition.getStatus() != ProcessStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.PROCESS_NOT_ACTIVE);
         }
-
-        // 创建流程实例
+        
+        return processDefinition;
+    }
+    
+    /**
+     * 查找开始节点定义
+     */
+    private ApprovalNodeDefinition findStartNodeDefinition(Long processDefinitionId) {
+        return nodeDefinitionRepository.findByProcessDefinitionIdAndIsStartNode(processDefinitionId, 1)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND, "流程定义中未找到开始节点"));
+    }
+    
+    /**
+     * 创建流程实例实体
+     */
+    private ProcessInstance createProcessInstanceEntity(ProcessInstanceCreateRequest request, 
+                                                      ProcessDefinition processDefinition,
+                                                      ApprovalNodeDefinition startNodeDef) {
         ProcessInstance instance = new ProcessInstance();
         instance.setId(idGenerator.nextId());
         instance.setProcessNo(generateProcessNo(processDefinition.getProcessCode()));
@@ -75,15 +114,11 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         instance.setEmployeeId(request.getEmployeeId());
         instance.setEmployeeName(request.getEmployeeName());
         instance.setCurrentNodeId(startNodeDef.getId());
-        // TODO: should have no form data processing in json here
-        try {
-            // 转换表单数据为JSON字符串
-            instance.setFormData(objectMapper.writeValueAsString(request.getFormData()));
-        } catch (Exception e) {
-            log.error("Error serializing form data", e);
-            throw new BusinessException(ErrorCode.INVALID_FORM_DATA);
-        }
-
+        
+        // 设置表单数据
+        // TODO there is no form needed at create stage
+        setFormDataToInstance(instance, request.getFormData());
+        
         instance.setStatus(ProcessInstanceStatus.DRAFT);
 
         // 设置申请人信息
@@ -105,9 +140,28 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         instance.setCreatedTime(LocalDateTime.now());
 
         // 保存流程实例
-        instance = processInstanceRepository.save(instance);
-
-        // 创建开始节点实例
+        return processInstanceRepository.save(instance);
+    }
+    
+    /**
+     * 设置表单数据到流程实例
+     */
+    private void setFormDataToInstance(ProcessInstance instance, Map<String, Object> formData) {
+        try {
+            // 转换表单数据为JSON字符串
+            instance.setFormData(objectMapper.writeValueAsString(formData));
+        } catch (Exception e) {
+            log.error("Error serializing form data", e);
+            throw new BusinessException(ErrorCode.INVALID_FORM_DATA);
+        }
+    }
+    
+    /**
+     * 创建开始节点实例
+     */
+    private ProcessNodeInstance createStartNodeInstance(ProcessInstance instance, 
+                                                       ApprovalNodeDefinition startNodeDef,
+                                                       String createdBy) {
         ProcessNodeInstance startNodeInstance = new ProcessNodeInstance();
         startNodeInstance.setId(idGenerator.nextId());
         startNodeInstance.setProcessInstanceId(instance.getId());
@@ -115,39 +169,70 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         startNodeInstance.setNodeName(startNodeDef.getNodeName());
         startNodeInstance.setNodeStatus(NodeInstanceStatus.IN_PROGRESS); // 设置为进行中
         startNodeInstance.setStartTime(LocalDateTime.now());
-        startNodeInstance.setCreatedBy(request.getApplyUserName());
+        startNodeInstance.setCreatedBy(createdBy);
         startNodeInstance.setCreatedTime(LocalDateTime.now());
 
         // 保存开始节点实例
-        nodeInstanceRepository.save(startNodeInstance);
-
-        // 创建开始节点的审批人实例（申请人自己）
+        return nodeInstanceRepository.save(startNodeInstance);
+    }
+    
+    /**
+     * 创建开始节点的审批人实例
+     */
+    private NodeApproverInstance createStartNodeApproverInstance(ProcessNodeInstance nodeInstance, 
+                                                               Long approverId, 
+                                                               String approverName) {
         NodeApproverInstance approverInstance = new NodeApproverInstance();
         approverInstance.setId(idGenerator.nextId());
-        approverInstance.setNodeInstanceId(startNodeInstance.getId());
-        approverInstance.setApproverId(request.getApplyUserId());
-        approverInstance.setApproverName(request.getApplyUserName());
+        approverInstance.setNodeInstanceId(nodeInstance.getId());
+        approverInstance.setApproverId(approverId);
+        approverInstance.setApproverName(approverName);
         approverInstance.setApproverType(ApproverType.USER); // 设置为申请人类型
         approverInstance.setApprovalStatus(ApprovalStatus.PENDING); // 设置为进行中
-        approverInstance.setCreatedBy(request.getApplyUserName());
+        approverInstance.setCreatedBy(approverName);
         approverInstance.setCreatedTime(LocalDateTime.now());
 
         // 保存审批人实例
-        approverInstanceRepository.save(approverInstance);
-
-        // 保存预选审批人（如果有）
-        savePreselectedApprovers(instance.getId(), request.getPreselectedApprovers());
-
-        // 记录操作日志
-        createOperationLog(instance.getId(), null, OperationType.CREATE, currentUserId, currentUsername);
-
-        return instance.getId();
+        return approverInstanceRepository.save(approverInstance);
     }
 
     @Override
     @Transactional
     public boolean submitProcessInstance(Long id) {
-        // 查找流程实例
+        // 查找流程实例并验证状态
+        ProcessInstance instance = findAndValidateProcessInstanceForSubmit(id);
+        
+        // 查找开始节点定义和实例
+        ApprovalNodeDefinition nodeDef = findStartNodeDefinition(instance.getProcessDefinitionId());
+        ProcessNodeInstance startNodeInstance = findStartNodeInstance(id, nodeDef.getId());
+
+        // 更新开始节点审批人状态
+        NodeApproverInstance approverInstance = updateStartNodeApproverStatus(startNodeInstance.getId());
+
+        // 创建审批记录
+        createSubmitApprovalRecord(id, startNodeInstance.getId());
+
+        // 检查节点是否完成并处理
+        boolean isNodeComplete = checkNodeComplete(startNodeInstance.getId(), nodeDef.getApprovalStrategy());
+        if (isNodeComplete) {
+            // 更新节点状态为已批准
+            updateNodeStatusToApproved(startNodeInstance);
+            
+            // 处理节点类型并流转
+            processNodeByType(instance, startNodeInstance, nodeDef);
+        }
+
+        // 记录操作日志
+        createOperationLog(instance.getId(), startNodeInstance.getId(), OperationType.SUBMIT,
+                SecurityUtil.getCurrentUserId(), SecurityUtil.getCurrentUsername());
+
+        return true;
+    }
+    
+    /**
+     * 查找并验证流程实例状态是否可提交
+     */
+    private ProcessInstance findAndValidateProcessInstanceForSubmit(Long id) {
         ProcessInstance instance = processInstanceRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_INSTANCE_NOT_FOUND));
 
@@ -156,33 +241,43 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
                 && instance.getStatus() != ProcessInstanceStatus.REWORK) {
             throw new BusinessException(ErrorCode.PROCESS_STATUS_NOT_SUBMITTABLE);
         }
-        ApprovalNodeDefinition nodeDef = nodeDefinitionRepository.findByProcessDefinitionIdAndIsStartNode(
-                instance.getProcessDefinitionId(), 1)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND, "流程定义中未找到开始节点"));
-        ProcessNodeInstance startNodeInstance = nodeInstanceRepository.findByProcessInstanceIdAndNodeDefinitionId(
-                id,
-                nodeDef.getId())
+        
+        return instance;
+    }
+    
+    /**
+     * 查找开始节点实例
+     */
+    private ProcessNodeInstance findStartNodeInstance(Long processInstanceId, Long nodeDefinitionId) {
+        return nodeInstanceRepository.findByProcessInstanceIdAndNodeDefinitionId(
+                processInstanceId, nodeDefinitionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND, "未找到开始节点实例"));
-
-        // 更新开始节点审批人状态
-
+    }
+    
+    /**
+     * 更新开始节点审批人状态
+     */
+    private NodeApproverInstance updateStartNodeApproverStatus(Long nodeInstanceId) {
         NodeApproverInstance approverInstance = approverInstanceRepository.findByNodeInstanceIdAndApproverId(
-                startNodeInstance.getId(), SecurityUtil.getCurrentUserId())
+                nodeInstanceId, SecurityUtil.getCurrentUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.APPROVER_INSTANCE_NOT_FOUND, "未找到开始节点审批人实例"));
 
         approverInstance.setApprovalStatus(ApprovalStatus.APPROVED);
         approverInstance.setActionTime(LocalDateTime.now());
         approverInstance.setUpdatedBy(SecurityUtil.getCurrentUsername());
         approverInstance.setUpdatedTime(LocalDateTime.now());
-        approverInstanceRepository.save(approverInstance);
-
-        // 创建审批记录
-        // TODO: createApprovalRecord refactor
-
+        
+        return approverInstanceRepository.save(approverInstance);
+    }
+    
+    /**
+     * 创建提交申请的审批记录
+     */
+    private ApprovalRecord createSubmitApprovalRecord(Long processInstanceId, Long nodeInstanceId) {
         ApprovalRecord approvalRecord = new ApprovalRecord();
         approvalRecord.setId(idGenerator.nextId());
-        approvalRecord.setProcessInstanceId(id);
-        approvalRecord.setNodeInstanceId(startNodeInstance.getId());
+        approvalRecord.setProcessInstanceId(processInstanceId);
+        approvalRecord.setNodeInstanceId(nodeInstanceId);
         approvalRecord.setApproverId(SecurityUtil.getCurrentUserId());
         approvalRecord.setApproverName(SecurityUtil.getCurrentUsername());
         approvalRecord.setActionType(ActionType.APPROVE);
@@ -190,38 +285,33 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         approvalRecord.setActionComment("提交申请");
         approvalRecord.setCreatedBy(SecurityUtil.getCurrentUsername());
         approvalRecord.setCreatedTime(LocalDateTime.now());
-        approvalRecordRepository.save(approvalRecord);
-
-        boolean isNodeComplete = checkNodeComplete(startNodeInstance.getId(), nodeDef.getApprovalStrategy());
-
-        if (isNodeComplete) {
-            // 更新节点状态
-
-            startNodeInstance.setNodeStatus(NodeInstanceStatus.APPROVED);
-            startNodeInstance.setEndTime(LocalDateTime.now());
-            startNodeInstance.setUpdatedBy(SecurityUtil.getCurrentUsername());
-            startNodeInstance.setUpdatedTime(LocalDateTime.now());
-            nodeInstanceRepository.save(startNodeInstance);
-
-            // 如果是条件节点，执行条件评估
-            if (nodeDef.getNodeType() == NodeType.CONDITIONAL) {
-                processConditionalNode(instance, startNodeInstance, nodeDef);
-            }
-            // 如果是并行节点，检查并行组是否完成
-            else if (nodeDef.getNodeType() == NodeType.PARALLEL) {
-                processParallelNode(instance, startNodeInstance, nodeDef);
-            }
-            // 如果是普通节点或者其他节点类型已处理完成，流转到下一节点
-            else {
-                processNextNode(instance, startNodeInstance, nodeDef);
-            }
+        
+        return approvalRecordRepository.save(approvalRecord);
+    }
+    
+    /**
+     * 更新节点状态为已批准
+     */
+    private void updateNodeStatusToApproved(ProcessNodeInstance nodeInstance) {
+        nodeInstance.setNodeStatus(NodeInstanceStatus.APPROVED);
+        nodeInstance.setEndTime(LocalDateTime.now());
+        nodeInstance.setUpdatedBy(SecurityUtil.getCurrentUsername());
+        nodeInstance.setUpdatedTime(LocalDateTime.now());
+        nodeInstanceRepository.save(nodeInstance);
+    }
+    
+    /**
+     * 根据节点类型处理并流转
+     */
+    private void processNodeByType(ProcessInstance instance, ProcessNodeInstance nodeInstance, ApprovalNodeDefinition nodeDef) {
+        // 根据节点类型处理
+        if (nodeDef.getNodeType() == NodeType.CONDITIONAL) {
+            processConditionalNode(instance, nodeInstance, nodeDef);
+        } else if (nodeDef.getNodeType() == NodeType.PARALLEL) {
+            processParallelNode(instance, nodeInstance, nodeDef);
+        } else {
+            processNextNode(instance, nodeInstance, nodeDef);
         }
-
-        // 记录操作日志
-        createOperationLog(instance.getId(), startNodeInstance.getId(), OperationType.SUBMIT,
-                SecurityUtil.getCurrentUserId(), SecurityUtil.getCurrentUsername());
-
-        return true;
     }
 
     @Override
@@ -1135,6 +1225,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
                     case ROLE:
                         // 角色（需要查询该角色下的所有用户）
                         // 实际项目中需要调用用户服务获取
+                        // TODO: ROLE level
                         createRoleApprovers(nodeInstanceId, approverDef);
                         break;
 
@@ -1165,7 +1256,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
     private void createUserApprover(Long nodeInstanceId, NodeApproverDefinition approverDef) {
         // 实际项目中需要查询用户信息
         Long approverId = Long.parseLong(approverDef.getApproverId());
-        String approverName = "User " + approverId; // 实际项目中应查询用户名称
+        String approverName = "User " + approverId; // TODO: 实际项目中应查询用户名称
 
         NodeApproverInstance approverInstance = new NodeApproverInstance();
         approverInstance.setId(idGenerator.nextId());
