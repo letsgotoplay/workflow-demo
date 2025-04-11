@@ -11,6 +11,7 @@ import com.example.creditpromotion.dto.request.ApprovalActionRequest;
 import com.example.creditpromotion.dto.request.ProcessInstanceCreateRequest;
 import com.example.creditpromotion.dto.response.ProcessInstanceDetailResponse;
 import com.example.creditpromotion.dto.response.ProcessInstanceListResponse;
+import com.example.creditpromotion.entity.ProcessInstance;
 import com.example.creditpromotion.enums.ProcessInstanceStatus;
 import com.example.creditpromotion.service.ProcessInstanceService;
 import com.example.creditpromotion.util.SecurityUtil;

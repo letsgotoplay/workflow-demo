@@ -6,9 +6,11 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.creditpromotion.entity.NodeApproverInstance;
+import com.example.creditpromotion.entity.ProcessDefinition;
 import com.example.creditpromotion.enums.ApprovalStatus;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 节点审批人实例数据访问接口
@@ -50,4 +52,6 @@ public interface NodeApproverInstanceRepository extends JpaRepository<NodeApprov
     @Query("SELECT nai FROM NodeApproverInstance nai JOIN ProcessNodeInstance pni ON nai.nodeInstanceId = pni.id " +
            "WHERE nai.approverId = :approverId AND nai.approvalStatus = 'PENDING' AND pni.nodeStatus = 'IN_PROGRESS'")
     List<NodeApproverInstance> findPendingTasksByApproverId(@Param("approverId") Long approverId);
+
+    Optional<NodeApproverInstance> findByNodeInstanceIdAndApproverId(Long id, Long currentUserId);
 }

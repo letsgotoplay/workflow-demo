@@ -130,12 +130,12 @@ public class ProcessDefinitionServiceImpl implements ProcessDefinitionService {
             }
             
             // 删除并行组关系
-            List<ParallelNodeGroup> groups = parallelNodeGroupRepository
-                    .findByProcessDefinitionId(processDefinition.getId());
-            for (ParallelNodeGroup group : groups) {
-                group.setIsDeleted(1);
-                parallelNodeGroupRepository.save(group);
-            }
+            //List<ParallelNodeGroup> groups = parallelNodeGroupRepository
+            //        .findByProcessDefinitionId(processDefinition.getId());
+            //for (ParallelNodeGroup group : groups) {
+            //    group.setIsDeleted(1);
+            //    parallelNodeGroupRepository.save(group);
+            //}
             
             // 删除重做配置
             List<ReworkConfiguration> reworks = reworkConfigRepository

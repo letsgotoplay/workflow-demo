@@ -7,6 +7,7 @@ import com.example.creditpromotion.dto.request.ApprovalActionRequest;
 import com.example.creditpromotion.dto.request.ProcessInstanceCreateRequest;
 import com.example.creditpromotion.dto.response.ProcessInstanceDetailResponse;
 import com.example.creditpromotion.dto.response.ProcessInstanceListResponse;
+import com.example.creditpromotion.entity.ProcessInstance;
 import com.example.creditpromotion.enums.ProcessInstanceStatus;
 
 /**
@@ -18,7 +19,7 @@ public interface ProcessInstanceService {
      * 创建流程实例（草稿）
      * 
      * @param request 创建请求
-     * @return 流程实例ID
+     * @return 流程实例 ID
      */
     Long createProcessInstance(ProcessInstanceCreateRequest request);
 

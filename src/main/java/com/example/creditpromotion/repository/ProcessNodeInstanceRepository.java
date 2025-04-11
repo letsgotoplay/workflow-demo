@@ -3,10 +3,12 @@ package com.example.creditpromotion.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import com.example.creditpromotion.entity.ProcessDefinition;
 import com.example.creditpromotion.entity.ProcessNodeInstance;
 import com.example.creditpromotion.enums.NodeInstanceStatus;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 流程节点实例数据访问接口
@@ -46,4 +48,6 @@ public interface ProcessNodeInstanceRepository extends JpaRepository<ProcessNode
      * @return 节点实例列表
      */
     List<ProcessNodeInstance> findByNodeDefinitionId(Long nodeDefinitionId);
+
+    Optional<ProcessNodeInstance> findByProcessInstanceIdAndNodeDefinitionId(Long instanceID, Long definitionID);
 }

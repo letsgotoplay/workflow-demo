@@ -32,8 +32,13 @@ public class ProcessInstanceCreateRequest {
 
     private LocalDate effectiveDate;
 
+    private String applyUserName;
+    
+    private Long applyUserId;
+
     private ProcessPriority priority = ProcessPriority.NORMAL;
 
     // 预选审批人信息
     private Map<String, List<Map<String, Object>>> preselectedApprovers;
+
 }

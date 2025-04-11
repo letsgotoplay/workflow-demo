@@ -1,0 +1,169 @@
+{
+  "processCode": "CREDIT_APPROVAL_001",
+  "processName": "信贷审批流程",
+  "processTypeCode": "CREDIT_APPROVAL",
+  "description": "信贷审批流程，包含条件节点、并行节点和普通审批节点",
+  "formConfig": "{\"\": \"\"}",
+  "timeoutDays": 7,
+  "priority": "NORMAL",
+  "nodes": [
+    {
+      "nodeKey": "start",
+      "nodeName": "开始节点",
+      "nodeType": "NORMAL",
+      "approverType": "USER",
+      "approvalStrategy": "ANY",
+      "isStartNode": true,
+      "isEndNode": false,
+      "approvers": [
+        {
+          "approverType": "USER",
+          "approverId": "user001",
+          "description": "流程发起人",
+          "isRequired": true,
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "nodeKey": "amount_check",
+      "nodeName": "金额检查",
+      "nodeType": "CONDITIONAL",
+      "approverType": "SYSTEM",
+      "approvalStrategy": "ANY",
+      "isStartNode": false,
+      "isEndNode": false,
+      "approvers": [
+        {
+          "approverType": "EXPRESSION",
+          "expression": "#amount > 10000",
+          "description": "金额检查表达式",
+          "isRequired": true,
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "nodeKey": "manager_approval",
+      "nodeName": "经理审批",
+      "nodeType": "NORMAL",
+      "approverType": "USER",
+      "approvalStrategy": "ALL",
+      "timeoutHours": 24,
+      "isStartNode": false,
+      "isEndNode": false,
+      "approvers": [
+        {
+          "approverType": "USER",
+          "approverId": "manager001",
+          "description": "部门经理",
+          "isRequired": true,
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "nodeKey": "parallel_review",
+      "nodeName": "并行评审",
+      "nodeType": "PARALLEL",
+      "approverType": "ROLE",
+      "approvalStrategy": "ALL",
+      "timeoutHours": 48,
+      "isStartNode": false,
+      "isEndNode": false,
+      "approvers": [
+        {
+          "approverType": "ROLE",
+          "approverId": "risk_reviewer",
+          "description": "风控审核员",
+          "isRequired": true,
+          "priority": 1
+        },
+        {
+          "approverType": "ROLE",
+          "approverId": "compliance_reviewer",
+          "description": "合规审核员",
+          "isRequired": true,
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "nodeKey": "director_approval",
+      "nodeName": "总监审批",
+      "nodeType": "NORMAL",
+      "approverType": "USER",
+      "approvalStrategy": "ANY",
+      "timeoutHours": 24,
+      "isStartNode": false,
+      "isEndNode": false,
+      "approvers": [
+        {
+          "approverType": "USER",
+          "approverId": "director001",
+          "description": "业务总监",
+          "isRequired": true,
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "nodeKey": "end",
+      "nodeName": "结束节点",
+      "nodeType": "NORMAL",
+      "approverType": "SYSTEM",
+      "approvalStrategy": "ANY",
+      "isStartNode": false,
+      "isEndNode": true,
+      "approvers": []
+    }
+  ],
+  "transitions": [
+    {
+      "sourceNodeKey": "start",
+      "targetNodeKey": "amount_check",
+      "transitionType": "NORMAL",
+      "priority": 1,
+      "description": "提交到金额检查"
+    },
+    {
+      "sourceNodeKey": "amount_check",
+      "targetNodeKey": "manager_approval",
+      "transitionType": "CONDITIONAL",
+      "conditionExpression": "#amount <= 50000",
+      "priority": 1,
+      "description": "金额小于等于5万，经理审批"
+    },
+    {
+      "sourceNodeKey": "amount_check",
+      "targetNodeKey": "parallel_review",
+      "transitionType": "CONDITIONAL",
+      "conditionExpression": "#amount > 50000",
+      "priority": 2,
+      "description": "金额大于5万，并行评审"
+    },
+    {
+      "sourceNodeKey": "manager_approval",
+      "targetNodeKey": "end",
+      "transitionType": "NORMAL",
+      "priority": 1,
+      "description": "经理审批完成"
+    },
+    {
+      "sourceNodeKey": "parallel_review",
+      "targetNodeKey": "director_approval",
+      "transitionType": "PARALLEL_END",
+      "priority": 1,
+      "description": "并行评审完成"
+    },
+    {
+      "sourceNodeKey": "director_approval",
+      "targetNodeKey": "end",
+      "transitionType": "NORMAL",
+      "priority": 1,
+      "description": "总监审批完成"
+    }
+  ],
+  "reworkConfigs": [],
+  "reminderConfigs": []
+}
