@@ -136,7 +136,7 @@ flowchart TD
     F --> H[Update process instance current node]
 ```
 
-##7. Rework Processing
+## 7. Rework Processing
 ```mermaid
 flowchart TD
     A[Handle Rework Action] --> B[Update approver status]

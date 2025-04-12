@@ -158,7 +158,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /**
-     * 查询用户待重做任务列表
+     * 查询发起用户待重做任务列表
      */
     private List<TaskResponse> getUserReworkTasksList(Long userId) {
         // 查询用户发起的且为重做状态的流程实例

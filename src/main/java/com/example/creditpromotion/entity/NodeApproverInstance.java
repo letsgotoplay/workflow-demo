@@ -74,8 +74,17 @@ public class NodeApproverInstance {
     @Column(name = "updated_time")
     private LocalDateTime updatedTime;
     
+    @Column(name = "role_id")
+    private String roleId;
+
+    @Column(name = "expression")
+    private String expression;
+    
     // 便捷方法
     public boolean isPreselected() {
         return Integer.valueOf(1).equals(this.isPreselected);
     }
+    
+    
+
 }

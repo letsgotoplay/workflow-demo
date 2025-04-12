@@ -1,5 +1,9 @@
 package com.example.creditpromotion.util;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -15,6 +19,7 @@ public class SecurityUtil {
      */
     public static String getCurrentUsername() {
         // Mock implementation - replace with your actual logic
+        // TODO: CURRENT USER OR DEFAULT TO SYSTEM
         return "testuser";
     }
     
@@ -71,5 +76,38 @@ public class SecurityUtil {
     public static String getCurrentDeviceInfo() {
         // Mock implementation - replace with your actual logic
         return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)";
+    }
+    
+    /**
+     * Check if the current user has a specific role
+     * @param roleId The role ID to check
+     * @return true if the user has the role, false otherwise
+     */
+    public static boolean hasRole(String roleId) {
+        // In a real application, this would check against the user's roles
+        // For now, we'll implement a simple check
+        
+        // Get the current user's roles from the security context
+        // This implementation will depend on your security framework (Spring Security, etc.)
+        Set<String> userRoles = getCurrentUserRoles();
+        
+        return userRoles.contains(roleId);
+    }
+    
+    /**
+     * Get the current user's roles
+     * @return A set of role IDs
+     */
+    public static Set<String> getCurrentUserRoles() {
+        // In a real application, this would get the roles from the security context
+        // For now, we'll return a mock implementation
+        
+        // TODO: Implement actual role retrieval from your security framework
+        return Collections.emptySet();
+    }
+
+    public static List<String> getCurrentUserGroups() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getCurrentUserGroups'");
     }
 }

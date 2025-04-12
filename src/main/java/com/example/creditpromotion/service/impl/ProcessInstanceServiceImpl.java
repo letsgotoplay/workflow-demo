@@ -24,6 +24,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -59,13 +60,14 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
         // 创建流程实例
         ProcessInstance instance = createProcessInstanceEntity(request, processDefinition, startNodeDef);
-        
+
         // 创建开始节点实例
-        ProcessNodeInstance startNodeInstance = createStartNodeInstance(instance, startNodeDef, request.getApplyUserName());
-        
+        ProcessNodeInstance startNodeInstance = createStartNodeInstance(instance, startNodeDef,
+                request.getApplyUserName(), null);
+
         // 创建开始节点的审批人实例（申请人自己）
         createStartNodeApproverInstance(startNodeInstance, request.getApplyUserId(), request.getApplyUserName());
-        
+
         // 保存预选审批人（如果有）
         savePreselectedApprovers(instance.getId(), request.getPreselectedApprovers());
 
@@ -76,22 +78,22 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
         return instance.getId();
     }
-    
+
     /**
      * 查找并验证流程定义
      */
     private ProcessDefinition findAndValidateProcessDefinition(Long processDefinitionId) {
         ProcessDefinition processDefinition = processDefinitionRepository.findById(processDefinitionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_DEFINITION_NOT_FOUND));
-                
+
         // 检查流程状态，只有ACTIVE状态的流程才能发起
         if (processDefinition.getStatus() != ProcessStatus.ACTIVE) {
             throw new BusinessException(ErrorCode.PROCESS_NOT_ACTIVE);
         }
-        
+
         return processDefinition;
     }
-    
+
     /**
      * 查找开始节点定义
      */
@@ -99,13 +101,13 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         return nodeDefinitionRepository.findByProcessDefinitionIdAndIsStartNode(processDefinitionId, 1)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND, "流程定义中未找到开始节点"));
     }
-    
+
     /**
      * 创建流程实例实体
      */
-    private ProcessInstance createProcessInstanceEntity(ProcessInstanceCreateRequest request, 
-                                                      ProcessDefinition processDefinition,
-                                                      ApprovalNodeDefinition startNodeDef) {
+    private ProcessInstance createProcessInstanceEntity(ProcessInstanceCreateRequest request,
+            ProcessDefinition processDefinition,
+            ApprovalNodeDefinition startNodeDef) {
         ProcessInstance instance = new ProcessInstance();
         instance.setId(idGenerator.nextId());
         instance.setProcessNo(generateProcessNo(processDefinition.getProcessCode()));
@@ -114,11 +116,11 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         instance.setEmployeeId(request.getEmployeeId());
         instance.setEmployeeName(request.getEmployeeName());
         instance.setCurrentNodeId(startNodeDef.getId());
-        
+
         // 设置表单数据
         // TODO there is no form needed at create stage
         setFormDataToInstance(instance, request.getFormData());
-        
+
         instance.setStatus(ProcessInstanceStatus.DRAFT);
 
         // 设置申请人信息
@@ -142,7 +144,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         // 保存流程实例
         return processInstanceRepository.save(instance);
     }
-    
+
     /**
      * 设置表单数据到流程实例
      */
@@ -155,19 +157,20 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
             throw new BusinessException(ErrorCode.INVALID_FORM_DATA);
         }
     }
-    
+
     /**
      * 创建开始节点实例
      */
-    private ProcessNodeInstance createStartNodeInstance(ProcessInstance instance, 
-                                                       ApprovalNodeDefinition startNodeDef,
-                                                       String createdBy) {
+    private ProcessNodeInstance createStartNodeInstance(ProcessInstance instance,
+            ApprovalNodeDefinition startNodeDef,
+            String createdBy, Long previousNodeId) {
         ProcessNodeInstance startNodeInstance = new ProcessNodeInstance();
         startNodeInstance.setId(idGenerator.nextId());
         startNodeInstance.setProcessInstanceId(instance.getId());
         startNodeInstance.setNodeDefinitionId(startNodeDef.getId());
         startNodeInstance.setNodeName(startNodeDef.getNodeName());
         startNodeInstance.setNodeStatus(NodeInstanceStatus.IN_PROGRESS); // 设置为进行中
+        startNodeInstance.setPrevNodeInstanceId(previousNodeId);
         startNodeInstance.setStartTime(LocalDateTime.now());
         startNodeInstance.setCreatedBy(createdBy);
         startNodeInstance.setCreatedTime(LocalDateTime.now());
@@ -175,13 +178,14 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         // 保存开始节点实例
         return nodeInstanceRepository.save(startNodeInstance);
     }
-    
+
     /**
      * 创建开始节点的审批人实例
      */
-    private NodeApproverInstance createStartNodeApproverInstance(ProcessNodeInstance nodeInstance, 
-                                                               Long approverId, 
-                                                               String approverName) {
+    private NodeApproverInstance createStartNodeApproverInstance(ProcessNodeInstance nodeInstance,
+            Long approverId,
+            String approverName) {
+                //TODO: CREATEDBY SHOULD BE USERID
         NodeApproverInstance approverInstance = new NodeApproverInstance();
         approverInstance.setId(idGenerator.nextId());
         approverInstance.setNodeInstanceId(nodeInstance.getId());
@@ -191,6 +195,8 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         approverInstance.setApprovalStatus(ApprovalStatus.PENDING); // 设置为进行中
         approverInstance.setCreatedBy(approverName);
         approverInstance.setCreatedTime(LocalDateTime.now());
+        approverInstance.setAssignTime(LocalDateTime.now());
+        
 
         // 保存审批人实例
         return approverInstanceRepository.save(approverInstance);
@@ -201,7 +207,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
     public boolean submitProcessInstance(Long id) {
         // 查找流程实例并验证状态
         ProcessInstance instance = findAndValidateProcessInstanceForSubmit(id);
-        
+
         // 查找开始节点定义和实例
         ApprovalNodeDefinition nodeDef = findStartNodeDefinition(instance.getProcessDefinitionId());
         ProcessNodeInstance startNodeInstance = findStartNodeInstance(id, nodeDef.getId());
@@ -217,7 +223,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         if (isNodeComplete) {
             // 更新节点状态为已批准
             updateNodeStatusToApproved(startNodeInstance);
-            
+
             // 处理节点类型并流转
             processNodeByType(instance, startNodeInstance, nodeDef);
         }
@@ -228,7 +234,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
         return true;
     }
-    
+
     /**
      * 查找并验证流程实例状态是否可提交
      */
@@ -241,10 +247,10 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
                 && instance.getStatus() != ProcessInstanceStatus.REWORK) {
             throw new BusinessException(ErrorCode.PROCESS_STATUS_NOT_SUBMITTABLE);
         }
-        
+
         return instance;
     }
-    
+
     /**
      * 查找开始节点实例
      */
@@ -253,7 +259,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
                 processInstanceId, nodeDefinitionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND, "未找到开始节点实例"));
     }
-    
+
     /**
      * 更新开始节点审批人状态
      */
@@ -266,10 +272,10 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         approverInstance.setActionTime(LocalDateTime.now());
         approverInstance.setUpdatedBy(SecurityUtil.getCurrentUsername());
         approverInstance.setUpdatedTime(LocalDateTime.now());
-        
+
         return approverInstanceRepository.save(approverInstance);
     }
-    
+
     /**
      * 创建提交申请的审批记录
      */
@@ -285,10 +291,10 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         approvalRecord.setActionComment("提交申请");
         approvalRecord.setCreatedBy(SecurityUtil.getCurrentUsername());
         approvalRecord.setCreatedTime(LocalDateTime.now());
-        
+
         return approvalRecordRepository.save(approvalRecord);
     }
-    
+
     /**
      * 更新节点状态为已批准
      */
@@ -299,11 +305,12 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         nodeInstance.setUpdatedTime(LocalDateTime.now());
         nodeInstanceRepository.save(nodeInstance);
     }
-    
+
     /**
      * 根据节点类型处理并流转
      */
-    private void processNodeByType(ProcessInstance instance, ProcessNodeInstance nodeInstance, ApprovalNodeDefinition nodeDef) {
+    private void processNodeByType(ProcessInstance instance, ProcessNodeInstance nodeInstance,
+            ApprovalNodeDefinition nodeDef) {
         // 根据节点类型处理
         if (nodeDef.getNodeType() == NodeType.CONDITIONAL) {
             processConditionalNode(instance, nodeInstance, nodeDef);
@@ -410,10 +417,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.APPROVER_INSTANCE_NOT_FOUND));
 
         // 检查审批人权限
-        Long currentUserId = SecurityUtil.getCurrentUserId();
-        if (!approverInstance.getApproverId().equals(currentUserId) && !SecurityUtil.isAdmin()) {
-            throw new BusinessException(ErrorCode.NO_PERMISSION);
-        }
+        validateApproverPermission(approverInstance);
 
         // 检查审批人状态
         if (approverInstance.getApprovalStatus() != ApprovalStatus.PENDING) {
@@ -435,6 +439,123 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
             default:
                 throw new BusinessException(ErrorCode.INVALID_ACTION_TYPE);
         }
+    }
+
+    /**
+     * Validate approver permission
+     */
+    private void validateApproverPermission(NodeApproverInstance approverInstance) {
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+
+        // If it's a direct user assignment, check user ID
+        if (approverInstance.getApproverType() == ApproverType.USER &&
+                !approverInstance.getApproverId().equals(currentUserId) &&
+                !SecurityUtil.isAdmin()) {
+            throw new BusinessException(ErrorCode.NO_PERMISSION);
+        }
+
+        // If it's a role-based assignment, check if the current user has the role
+        if (approverInstance.getApproverType() == ApproverType.ROLE) {
+            String roleId = approverInstance.getRoleId();
+            if (roleId != null && !SecurityUtil.hasRole(roleId) && !SecurityUtil.isAdmin()) {
+                throw new BusinessException(ErrorCode.NO_PERMISSION, "您没有所需的角色权限");
+            }
+
+            // If this is the first time a user with the role is approving,
+            // assign this task to the current user
+            if (approverInstance.getApproverId() == null) {
+                approverInstance.setApproverId(currentUserId);
+                approverInstance.setApproverName(SecurityUtil.getCurrentUsername());
+                approverInstance.setUpdatedBy(SecurityUtil.getCurrentUsername());
+                approverInstance.setUpdatedTime(LocalDateTime.now());
+                approverInstanceRepository.save(approverInstance);
+
+                log.info("Role-based task claimed by user: {}, role: {}",
+                        currentUserId, roleId);
+            }
+            // If the task has already been claimed by another user with the role
+            else if (!approverInstance.getApproverId().equals(currentUserId) && !SecurityUtil.isAdmin()) {
+                throw new BusinessException(ErrorCode.NO_PERMISSION, "该任务已被其他用户认领");
+            }
+
+        }
+        // If it's an expression-based assignment, evaluate the expression as a whole
+        if (approverInstance.getApproverType() == ApproverType.EXPRESSION) {
+            String expression = approverInstance.getExpression();
+            if (expression != null && !expression.trim().isEmpty()) {
+                // Prepare variables for expression evaluation
+                Map<String, Object> variables = buildExpressionContext();
+
+                // Evaluate the expression using SpEL
+                boolean hasPermission = false;
+                try {
+                    hasPermission = spelExpressionService.evaluateBoolean(expression, variables);
+                } catch (Exception e) {
+                    log.error("Error evaluating expression permission: " + expression, e);
+                    throw new BusinessException(ErrorCode.EXPRESSION_EVALUATION_ERROR, "表达式权限评估错误");
+                }
+
+                if (!hasPermission && !SecurityUtil.isAdmin()) {
+                    throw new BusinessException(ErrorCode.NO_PERMISSION, "您不满足表达式权限条件");
+                }
+
+                // If this is the first time a user with the expression permission is approving,
+                // assign this task to the current user
+                if (approverInstance.getApproverId() == null) {
+                    approverInstance.setApproverId(currentUserId);
+                    approverInstance.setApproverName(SecurityUtil.getCurrentUsername());
+                    approverInstance.setUpdatedBy(SecurityUtil.getCurrentUsername());
+                    approverInstance.setUpdatedTime(LocalDateTime.now());
+                    approverInstanceRepository.save(approverInstance);
+
+                    log.info("Expression-based task claimed by user: {}, expression: {}",
+                            currentUserId, expression);
+                }
+                // If the task has already been claimed by another user
+                else if (!approverInstance.getApproverId().equals(currentUserId) && !SecurityUtil.isAdmin()) {
+                    throw new BusinessException(ErrorCode.NO_PERMISSION, "该任务已被其他用户认领");
+                }
+            }
+        }
+    }
+
+    /**
+     * Build context for expression evaluation
+     * 
+     * @return Map of variables for expression evaluation
+     */
+
+    private Map<String, Object> buildExpressionContext() {
+        Map<String, Object> variables = new HashMap<>();
+        // TODO: REAL COMMON CONTEXT BUILDING
+        // Add user information
+        Long currentUserId = SecurityUtil.getCurrentUserId();
+        String currentUsername = SecurityUtil.getCurrentUsername();
+        variables.put("userId", currentUserId);
+        variables.put("username", currentUsername);
+
+        // Add user roles and groups
+        Set<String> userRoles = SecurityUtil.getCurrentUserRoles();
+        List<String> userGroups = SecurityUtil.getCurrentUserGroups();
+        variables.put("userRoles", userRoles);
+        variables.put("userGroups", userGroups);
+
+        // Add helper functions for expression evaluation
+        variables.put("hasRole", new Function<String, Boolean>() {
+            @Override
+            public Boolean apply(String role) {
+                return userRoles.contains(role);
+            }
+        });
+
+        variables.put("hasGroup", new Function<String, Boolean>() {
+            @Override
+            public Boolean apply(String group) {
+                return userGroups.contains(group);
+            }
+        });
+
+        return variables;
     }
 
     @Override
@@ -762,9 +883,10 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
             // 根据重做类型确定目标节点
             switch (reworkConfig.getReworkType()) {
                 case TO_INITIATOR:
-                    // 重做到发起人，不需要目标节点，直接将流程状态改为REWORK
+                    // 重做到发起人，直接将流程状态改为REWORK
+                    // TODO: 实现重做到发起人 approver and instance to start node
                     instance.setStatus(ProcessInstanceStatus.REWORK);
-                    instance.setCurrentNodeId(null); // 清空当前节点
+                    instance.setCurrentNodeId(null); // to start node def id
                     instance.setReworkCount(instance.getReworkCount() + 1);
                     instance.setUpdatedBy(SecurityUtil.getCurrentUsername());
                     instance.setUpdatedTime(LocalDateTime.now());
@@ -810,8 +932,17 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
         // 如果有确定的目标节点，创建新的节点实例
         if (reworkTargetNodeId != null) {
-            // 更新流程实例状态
-            instance.setStatus(ProcessInstanceStatus.IN_PROGRESS);
+            // 查找目标节点定义
+            ApprovalNodeDefinition targetNodeDef = nodeDefinitionRepository.findById(reworkTargetNodeId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND));
+            
+            // 如果目标节点是开始节点，将流程状态设置为REWORK，否则设置为IN_PROGRESS
+            if (targetNodeDef.isStartNode()) {
+                instance.setStatus(ProcessInstanceStatus.REWORK);
+            } else {
+                instance.setStatus(ProcessInstanceStatus.IN_PROGRESS);
+            }
+            
             instance.setCurrentNodeId(reworkTargetNodeId);
             instance.setReworkCount(instance.getReworkCount() + 1);
             instance.setUpdatedBy(SecurityUtil.getCurrentUsername());
@@ -1237,8 +1368,9 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
                     case EXPRESSION:
                         // 表达式（需要动态计算）
+                        // TODO: Expression implementation
                         if (StringUtils.hasText(approverDef.getExpression())) {
-                            createExpressionApprovers(nodeInstanceId, approverDef, processInstanceId);
+                            createExpressionApprovers(nodeInstanceId, approverDef);
                         }
                         break;
 
@@ -1255,6 +1387,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
      */
     private void createUserApprover(Long nodeInstanceId, NodeApproverDefinition approverDef) {
         // 实际项目中需要查询用户信息
+        // TODO: CREATED BY SHOULD BE USER ID 
         Long approverId = Long.parseLong(approverDef.getApproverId());
         String approverName = "User " + approverId; // TODO: 实际项目中应查询用户名称
 
@@ -1286,33 +1419,47 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
      * 创建角色类型的审批人实例
      */
     private void createRoleApprovers(Long nodeInstanceId, NodeApproverDefinition approverDef) {
-        // 实际项目中需要调用用户服务获取该角色下的所有用户
-        // 这里简化处理，假设只有一个用户
-        Long approverId = 100L; // 模拟角色下的用户ID
-        String approverName = "Role User"; // 模拟用户名称
+        // Instead of creating an approver instance for a specific user,
+        // we'll create a role-based approver instance that can be claimed by any user
+        // with the role
 
+        // Extract the role ID/code from the approver definition
+        String roleId = approverDef.getApproverId();
+        String roleName = approverDef.getDescription();
+
+        if (!StringUtils.hasText(roleId)) {
+            log.error("Role ID is empty for node approver definition: {}", approverDef.getId());
+            throw new BusinessException(ErrorCode.INVALID_APPROVER_DEFINITION, "角色ID不能为空");
+        }
+
+        // Create a special approver instance for the role
         NodeApproverInstance approverInstance = new NodeApproverInstance();
         approverInstance.setId(idGenerator.nextId());
         approverInstance.setNodeInstanceId(nodeInstanceId);
-        approverInstance.setApproverId(approverId);
-        approverInstance.setApproverName(approverName);
+        approverInstance.setApproverId(null); // No specific approver ID yet
+        approverInstance.setApproverName(roleName != null ? roleName : "Role: " + roleId);
         approverInstance.setApproverType(ApproverType.ROLE);
         approverInstance.setApprovalStatus(ApprovalStatus.PENDING);
         approverInstance.setAssignTime(LocalDateTime.now());
+        approverInstance.setRoleId(roleId); // Store the role ID for later authorization checks
 
-        // 设置超时时间（继承节点实例的超时时间）
+        // Set timeout (inherit from node instance)
         ProcessNodeInstance nodeInstance = nodeInstanceRepository.findById(nodeInstanceId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
         if (nodeInstance.getDueTime() != null) {
             approverInstance.setDueTime(nodeInstance.getDueTime());
         }
 
-        // 设置元数据
+        // Set metadata
         String currentUsername = SecurityUtil.getCurrentUsername();
         approverInstance.setCreatedBy(currentUsername);
         approverInstance.setCreatedTime(LocalDateTime.now());
 
         approverInstanceRepository.save(approverInstance);
+
+        // Log the creation of a role-based approver
+        log.info("Created role-based approver instance for role: {}, node instance: {}",
+                roleId, nodeInstanceId);
     }
 
     /**
@@ -1321,6 +1468,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
     private void createDepartmentApprovers(Long nodeInstanceId, NodeApproverDefinition approverDef) {
         // 实际项目中需要调用组织结构服务获取该部门下的所有用户
         // 这里简化处理，假设只有一个用户
+        // TODO: NOT NEEDED or need real implementation
         Long approverId = 200L; // 模拟部门下的用户ID
         String approverName = "Department User"; // 模拟用户名称
 
@@ -1351,71 +1499,38 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
     /**
      * 创建表达式类型的审批人实例
      */
-    private void createExpressionApprovers(Long nodeInstanceId, NodeApproverDefinition approverDef,
-            Long processInstanceId) {
-        // 查询流程实例
-        ProcessInstance instance = processInstanceRepository.findById(processInstanceId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_INSTANCE_NOT_FOUND));
+    private void createExpressionApprovers(Long nodeInstanceId, NodeApproverDefinition approverDef) {
+        // 检查表达式类型
+        String expression = approverDef.getExpression();
 
-        // 构建SpEL表达式变量
-        Map<String, Object> variables = new HashMap<>();
+        // 如果是权限表达式（以#hasRole或#hasGroup开头）
+        if (expression != null && !expression.trim().isEmpty()) {
+            // 创建一个表达式类型的审批人实例，但不指定具体审批人
+            NodeApproverInstance approverInstance = new NodeApproverInstance();
+            approverInstance.setId(idGenerator.nextId());
+            approverInstance.setNodeInstanceId(nodeInstanceId);
+            approverInstance.setApproverId(null); // 暂不指定审批人，等待有权限的人认领
+            approverInstance.setApproverName(approverDef.getDescription()); // 临时名称
+            approverInstance.setApproverType(ApproverType.EXPRESSION);
+            approverInstance.setApprovalStatus(ApprovalStatus.PENDING);
+            approverInstance.setAssignTime(LocalDateTime.now());
+            approverInstance.setExpression(expression); // 存储表达式
 
-        // 添加申请人信息
-        Map<String, Object> applicant = new HashMap<>();
-        applicant.put("id", instance.getApplyUserId());
-        applicant.put("name", instance.getApplyUserName());
-        // 实际项目中需要查询更多申请人信息，如部门、上级等
-        applicant.put("directManager", 300L); // 模拟直接主管ID
-        applicant.put("directManagerName", "Direct Manager"); // 模拟直接主管名称
-
-        variables.put("applicant", applicant);
-
-        // 添加表单数据
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> formData = objectMapper.readValue(instance.getFormData(), Map.class);
-            variables.put("form", formData);
-        } catch (Exception e) {
-            log.error("Error deserializing form data", e);
-            variables.put("form", new HashMap<>());
-        }
-
-        // 求值表达式
-        try {
-            // 如果表达式返回用户ID
-            Long approverId = spelExpressionService.evaluateObject(
-                    approverDef.getExpression(), variables, Long.class);
-
-            if (approverId != null) {
-                // 实际项目中需要查询用户信息
-                String approverName = "Expr User " + approverId; // 实际项目中应查询用户名称
-
-                NodeApproverInstance approverInstance = new NodeApproverInstance();
-                approverInstance.setId(idGenerator.nextId());
-                approverInstance.setNodeInstanceId(nodeInstanceId);
-                approverInstance.setApproverId(approverId);
-                approverInstance.setApproverName(approverName);
-                approverInstance.setApproverType(ApproverType.EXPRESSION);
-                approverInstance.setApprovalStatus(ApprovalStatus.PENDING);
-                approverInstance.setAssignTime(LocalDateTime.now());
-
-                // 设置超时时间（继承节点实例的超时时间）
-                ProcessNodeInstance nodeInstance = nodeInstanceRepository.findById(nodeInstanceId)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
-                if (nodeInstance.getDueTime() != null) {
-                    approverInstance.setDueTime(nodeInstance.getDueTime());
-                }
-
-                // 设置元数据
-                String currentUsername = SecurityUtil.getCurrentUsername();
-                approverInstance.setCreatedBy(currentUsername);
-                approverInstance.setCreatedTime(LocalDateTime.now());
-
-                approverInstanceRepository.save(approverInstance);
+            // 设置超时时间（继承节点实例的超时时间）
+            ProcessNodeInstance nodeInstance = nodeInstanceRepository.findById(nodeInstanceId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
+            if (nodeInstance.getDueTime() != null) {
+                approverInstance.setDueTime(nodeInstance.getDueTime());
             }
-        } catch (Exception e) {
-            log.error("Error evaluating expression: " + approverDef.getExpression(), e);
-            throw new BusinessException(ErrorCode.EXPRESSION_EVALUATION_ERROR);
+
+            // 设置元数据
+            String currentUsername = SecurityUtil.getCurrentUsername();
+            approverInstance.setCreatedBy(currentUsername);
+            approverInstance.setCreatedTime(LocalDateTime.now());
+
+            approverInstanceRepository.save(approverInstance);
+
+            log.info("Created expression-based approver instance with expression: {}", expression);
         }
     }
 

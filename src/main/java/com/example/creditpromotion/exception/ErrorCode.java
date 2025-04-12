@@ -29,7 +29,11 @@ public enum ErrorCode {
     TRANSITION_NOT_FOUND(21003, "转换关系不存在"),
     NO_MATCHING_TRANSITION(21004, "没有匹配的转换路径"),
     MULTIPLE_TRANSITIONS(21005, "存在多个转换路径"),
-    
+    //
+    INVALID_APPROVER_DEFINITION(21006, "无效的审批人定义"),
+    INVALID_APPROVER_TYPE(21007, "无效的审批人类型"),
+    INVALID_APPROVER_EXPRESSION(21008, "无效的审批人表达式"),
+    INVALID_APPROVER_TARGET(21009, "无效的审批人目标"),
     // 流程实例相关错误
     PROCESS_INSTANCE_NOT_FOUND(30001, "流程实例不存在"),
     PROCESS_NOT_ACTIVE(30002, "流程未激活"),
