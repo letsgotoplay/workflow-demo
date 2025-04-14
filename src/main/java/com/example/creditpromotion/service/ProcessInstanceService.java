@@ -1,5 +1,7 @@
 package com.example.creditpromotion.service;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -8,6 +10,7 @@ import com.example.creditpromotion.dto.request.ProcessInstanceCreateRequest;
 import com.example.creditpromotion.dto.response.ProcessInstanceDetailResponse;
 import com.example.creditpromotion.dto.response.ProcessInstanceListResponse;
 import com.example.creditpromotion.entity.ProcessInstance;
+import com.example.creditpromotion.enums.ActionType;
 import com.example.creditpromotion.enums.ProcessInstanceStatus;
 
 /**
@@ -79,4 +82,7 @@ public interface ProcessInstanceService {
      */
     Page<ProcessInstanceListResponse> getProcessInstanceList(
             Long processDefinitionId, ProcessInstanceStatus status, String keyword, Pageable pageable);
-}
+
+   List<ActionType> getAllowedActionsForCurrentUser(Long processInstanceId) ;
+ 
+        }

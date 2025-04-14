@@ -9,5 +9,6 @@ public enum ActionType {
     REWORK,      // 重做
     TRANSFER,    // 转交
     CANCEL,      // 取消
-    REMIND       // 提醒
+    REMIND,       // 提醒
+    SUBMIT       // 提交
 }

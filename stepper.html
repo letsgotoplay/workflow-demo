@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信贷员晋升流程跟踪</title>
+    <style>
+        :root {
+            --primary-color: #1890ff;
+            --success-color: #52c41a;
+            --warning-color: #faad14;
+            --error-color: #f5222d;
+            --font-color: #333333;
+            --border-color: #e8e8e8;
+            --bg-color: #f5f5f5;
+            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            padding: 16px 0;
+        }
+        
+        .title {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        
+        .card {
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+            padding: 24px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        /* Stepper 样式 */
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .steps::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 32px;
+            right: 32px;
+            height: 2px;
+            background-color: var(--border-color);
+            z-index: 1;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        
+        .step:hover .step-icon {
+            box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.2);
+        }
+        
+        .step-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #fff;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s;
+        }
+        
+        .step-title {
+            font-size: 14px;
+            text-align: center;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .step-status {
+            font-size: 12px;
+            margin-top: 4px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            color: #fff;
+        }
+        
+        /* 步骤状态样式 */
+        .step-completed .step-icon {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: #fff;
+        }
+        
+        .step-active .step-icon {
+            background-color: #fff;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .step-rejected .step-icon {
+            background-color: var(--error-color);
+            border-color: var(--error-color);
+            color: #fff;
+        }
+        
+        .step-future .step-icon {
+            background-color: #fff;
+            border-color: var(--border-color);
+            color: #999;
+        }
+        
+        .status-completed {
+            background-color: var(--success-color);
+        }
+        
+        .status-active {
+            background-color: var(--primary-color);
+        }
+        
+        .status-rejected {
+            background-color: var(--error-color);
+        }
+        
+        .status-future {
+            background-color: #999;
+        }
+        
+        /* 步骤连接线 */
+        .step-completed::after {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            right: -50%;
+            height: 2px;
+            background-color: var(--success-color);
+            z-index: 1;
+        }
+        
+        .step:last-child::after {
+            display: none;
+        }
+        
+        /* 步骤详情样式 */
+        .steps-detail {
+            margin-top: 40px;
+        }
+        
+        .step-content {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 16px;
+            display: none;
+        }
+        
+        .step-content.active {
+            display: block;
+        }
+        
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 20px;
+        }
+        
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -30px;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+        
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 12px;
+            width: 2px;
+            bottom: 0;
+            background-color: var(--border-color);
+        }
+        
+        .timeline-item:last-child::after {
+            display: none;
+        }
+        
+        .timeline-item.completed::before {
+            border-color: var(--success-color);
+            background-color: var(--success-color);
+        }
+        
+        .timeline-item.active::before {
+            border-color: var(--primary-color);
+            background-color: #fff;
+        }
+        
+        .timeline-item.rejected::before {
+            border-color: var(--error-color);
+            background-color: var(--error-color);
+        }
+        
+        .timeline-item.future::before {
+            border-color: #ccc;
+            background-color: #fff;
+        }
+        
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .timeline-title {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .timeline-date {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .timeline-content {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        /* 标签样式 */
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 8px;
+            font-size: 12px;
+            border-radius: 2px;
+            height: 22px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            white-space: nowrap;
+        }
+        
+        .tag-green {
+            background-color: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        
+        .tag-blue {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            color: #1890ff;
+        }
+        
+        .tag-red {
+            background-color: #fff1f0;
+            border: 1px solid #ffa39e;
+            color: #f5222d;
+        }
+        
+        .tag-gray {
+            background-color: #f5f5f5;
+            border: 1px solid #d9d9d9;
+            color: #666;
+        }
+        
+        .tag-icon {
+            margin-right: 4px;
+        }
+        
+        /* 用户信息样式 */
+        .approver-info {
+            margin-top: 8px;
+            padding: 8px;
+            background-color: #fafafa;
+            border-radius: 4px;
+        }
+        
+        .approver {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .approver:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .approver-name {
+            font-weight: 500;
+        }
+        
+        .approver-comment {
+            margin-top: 4px;
+            color: #666;
+            font-size: 13px;
+        }
+        
+        /* 表单样式 */
+        .form-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .form-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .form-section-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -8px;
+        }
+        
+        .form-col {
+            padding: 0 8px;
+            margin-bottom: 16px;
+            flex: 1 0 50%;
+        }
+        
+        @media screen and (max-width: 768px) {
+            .form-col {
+                flex: 1 0 100%;
+            }
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+        
+        .form-control.textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            background-color: #096dd9;
+        }
+        
+        .btn-default {
+            background-color: #fff;
+            border-color: #d9d9d9;
+        }
+        
+        .btn-default:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .btn + .btn {
+            margin-left: 8px;
+        }
+        
+        /* 步骤高亮 */
+        .step.highlighted {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+        
+        .step.highlighted .step-icon {
+            box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.3);
+        }
+        
+        /* 响应式样式 */
+        @media screen and (max-width: 768px) {
+            .steps {
+                flex-wrap: wrap;
+            }
+            
+            .step {
+                flex: 0 0 33.33%;
+                margin-bottom: 20px;
+            }
+            
+            .steps::before {
+                display: none;
+            }
+            
+            .step::after {
+                display: none;
+            }
+        }
+        
+        @media screen and (max-width: 480px) {
+            .step {
+                flex: 0 0 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">信贷员晋升流程跟踪</h1>
+            <p class="subtitle">申请编号: PROMOTION-202504-00123 | 申请人: 张三 | 申请时间: 2025-04-05 09:30:25</p>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">流程进度</h2>
+            
+            <!-- Stepper 组件 - 点击节点展示详情 -->
+            <div class="steps">
+                <!-- 步骤0: 表单提交 (已完成) -->
+                <div class="step step-completed" data-step="0" onclick="showStepDetail(0)">
+                    <div class="step-icon">
+                        <i>✓</i>
+                    </div>
+                    <span class="step-title">表单提交</span>
+                    <span class="step-status status-completed">已完成</span>
+                </div>
+                
+                <!-- 步骤1: 部门初审 (已完成) -->
+                <div class="step step-completed" data-step="1" onclick="showStepDetail(1)">
+                    <div class="step-icon">
+                        <i>✓</i>
+                    </div>
+                    <span class="step-title">部门初审</span>
+                    <span class="step-status status-completed">已完成</span>
+                </div>
+                
+                <!-- 步骤2: 业务风控并行审批 (已完成) -->
+                <div class="step step-completed" data-step="2" onclick="showStepDetail(2)">
+                    <div class="step-icon">
+                        <i>✓</i>
+                    </div>
+                    <span class="step-title">业务风控审批</span>
+                    <span class="step-status status-completed">已完成</span>
+                </div>
+                
+                <!-- 步骤3: 法务合规并行审批 (已完成) -->
+                <div class="step step-completed" data-step="3" onclick="showStepDetail(3)">
+                    <div class="step-icon">
+                        <i>✓</i>
+                    </div>
+                    <span class="step-title">法务合规审批</span>
+                    <span class="step-status status-completed">已完成</span>
+                </div>
+                
+                <!-- 步骤4: 级别检查 (已完成) -->
+                <div class="step step-completed" data-step="4" onclick="showStepDetail(4)">
+                    <div class="step-icon">
+                        <i>✓</i>
+                    </div>
+                    <span class="step-title">级别检查</span>
+                    <span class="step-status status-completed">已完成</span>
+                </div>
+                
+                <!-- 步骤5: 总监审批 (当前进行) -->
+                <div class="step step-active" data-step="5" onclick="showStepDetail(5)">
+                    <div class="step-icon">
+                        <i>6</i>
+                    </div>
+                    <span class="step-title">总监审批</span>
+                    <span class="step-status status-active">进行中</span>
+                </div>
+                
+                <!-- 步骤6: 人力资源确认 (未开始) -->
+                <div class="step step-future" data-step="6" onclick="showStepDetail(6)">
+                    <div class="step-icon">
+                        <i>7</i>
+                    </div>
+                    <span class="step-title">人力资源确认</span>
+                    <span class="step-status status-future">未开始</span>
+                </div>
+            </div>
+            
+            <!-- 步骤详情容器 -->
+            <div class="steps-detail">
+                <!-- 步骤0详情：表单提交 -->
+                <div id="step-content-0" class="step-content">
+                    <div class="timeline">
+                        <div class="timeline-item completed">
+                            <div class="timeline-header">
+                                <span class="timeline-title">晋升申请表单提交</span>
+                                <span class="timeline-date">2025-04-05 09:30:25</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-green">
+                                    <span class="tag-icon">✓</span>
+                                    已提交
+                                </div>
+                                <p>张三提交了晋升申请表单，申请从中级信贷员晋升为高级信贷员。</p>
+                            </div>
+                            <div style="margin-top: 16px;">
+                                <div class="form-section">
+                                    <h3 class="form-section-title">基本信息</h3>
+                                    <div class="form-row">
+                                        <div class="form-col">
+                                            <label class="form-label">员工编号</label>
+                                            <div>EMP20210315</div>
+                                        </div>
+                                        <div class="form-col">
+                                            <label class="form-label">员工姓名</label>
+                                            <div>张三</div>
+                                        </div>
+                                        <div class="form-col">
+                                            <label class="form-label">所属部门</label>
+                                            <div>零售信贷部</div>
+                                        </div>
+                                        <div class="form-col">
+                                            <label class="form-label">入职日期</label>
+                                            <div>2021-03-15</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-section">
+                                    <h3 class="form-section-title">晋升信息</h3>
+                                    <div class="form-row">
+                                        <div class="form-col">
+                                            <label class="form-label">当前级别</label>
+                                            <div>中级信贷员</div>
+                                        </div>
+                                        <div class="form-col">
+                                            <label class="form-label">目标级别</label>
+                                            <div>高级信贷员</div>
+                                        </div>
+                                        <div class="form-col">
+                                            <label class="form-label">预期生效日期</label>
+                                            <div>2025-05-01</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-section">
+                                    <h3 class="form-section-title">申请说明</h3>
+                                    <div class="form-row">
+                                        <div class="form-col">
+                                            <label class="form-label">晋升理由</label>
+                                            <div style="white-space: pre-line;">张三自入职以来，工作表现突出，已连续三个季度达成业务指标，并在客户满意度调查中获得优秀评价。熟悉各项信贷产品，风控意识强，能独立完成复杂信贷审批。已获得内部"优秀员工"称号，符合高级信贷员晋升条件。</div>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-col">
+                                            <label class="form-label">业绩表现</label>
+                                            <div style="white-space: pre-line;">1. 2024年Q4业务完成率达到135%，在部门内排名第一
+2. 2025年Q1截至目前业务完成率达到112%
+3. 客户满意度评分连续两季度达到4.8分（满分5分）
+4. 成功开发了3个大客户，带来贷款规模1500万元
+5. 贷款不良率为零，风控效果优异</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-section">
+                                    <h3 class="form-section-title">附件</h3>
+                                    <div class="form-row">
+                                        <div class="form-col">
+                                            <div>
+                                                <a href="#" style="color: var(--primary-color); text-decoration: none;">
+                                                    📄 业绩证明材料.pdf
+                                                </a>
+                                            </div>
+                                            <div style="margin-top: 8px;">
+                                                <a href="#" style="color: var(--primary-color); text-decoration: none;">
+                                                    📄 客户满意度评价.xlsx
+                                                </a>
+                                            </div>
+                                            <div style="margin-top: 8px;">
+                                                <a href="#" style="color: var(--primary-color); text-decoration: none;">
+                                                    📄 培训证书.pdf
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤1详情：部门初审 -->
+                <div id="step-content-1" class="step-content">
+                    <div class="timeline">
+                        <div class="timeline-item completed">
+                            <div class="timeline-header">
+                                <span class="timeline-title">部门初审</span>
+                                <span class="timeline-date">2025-04-05 10:15:30</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-green">
+                                    <span class="tag-icon">✓</span>
+                                    已通过
+                                </div>
+                            </div>
+                            <div class="approver-info">
+                                <div class="approver">
+                                    <div>
+                                        <div class="approver-name">李四（部门经理）</div>
+                                        <div class="approver-comment">员工表现优秀，符合晋升条件，同意晋升申请。特别是在客户满意度方面表现突出，连续两季度获得客户高度评价，带动了部门整体业绩提升。建议加强复杂产品知识培训，为未来发展奠定基础。</div>
+                                    </div>
+                                    <div class="tag tag-green">已批准</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤2详情：并行节点 (ANY策略) -->
+                <div id="step-content-2" class="step-content">
+                    <div class="timeline">
+                        <!-- 并行子节点1 -->
+                        <div class="timeline-item completed">
+                            <div class="timeline-header">
+                                <span class="timeline-title">业务部门审批</span>
+                                <span class="timeline-date">2025-04-05 14:20:15</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-green">
+                                    <span class="tag-icon">✓</span>
+                                    已通过
+                                </div>
+                                <div style="margin-top: 8px; font-style: italic; color: #666;">
+                                    <small>注：该节点属于"任一批准即可"的并行节点组。</small>
+                                </div>
+                            </div>
+                            <div class="approver-info">
+                                <div class="approver">
+                                    <div>
+                                        <div class="approver-name">王五（业务经理）</div>
+                                        <div class="approver-comment">业务能力强，客户满意度高，同意晋升。员工在信贷产品推广方面有很好的思路，带来了新的业务增长点。</div>
+                                    </div>
+                                    <div class="tag tag-green">已批准</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 并行子节点2 - 只要任一个通过即可完成 -->
+                        <div class="timeline-item future">
+                            <div class="timeline-header">
+                                <span class="timeline-title">风控部门审批</span>
+                                <span class="timeline-date">-</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-gray">
+                                    <span class="tag-icon">-</span>
+                                    已跳过
+                                </div>
+                                <div><small>注：业务部门已批准，根据"任一批准"策略，此节点自动跳过</small></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤3详情：并行节点 (ALL策略) -->
+                <div id="step-content-3" class="step-content">
+                    <div class="timeline">
+                        <!-- 并行子节点1 -->
+                        <div class="timeline-item completed">
+                            <div class="timeline-header">
+                                <span class="timeline-title">法务部门审批</span>
+                                <span class="timeline-date">2025-04-06 09:45:10</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-green">
+                                    <span class="tag-icon">✓</span>
+                                    已通过
+                                </div>
+                                <div style="margin-top: 8px; font-style: italic; color: #666;">
+                                    <small>注：该节点属于"全部批准"的并行节点组。</small>
+                                </div>
+                            </div>
+                            <div class="approver-info">
+                                <div class="approver">
+                                    <div>
+                                        <div class="approver-name">赵六（法务经理）</div>
+                                        <div class="approver-comment">无法律风险，符合合规要求。该员工对信贷合同条款理解透彻，能有效规避法律风险。</div>
+                                    </div>
+                                    <div class="tag tag-green">已批准</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 并行子节点2 - 需要全部通过 -->
+                        <div class="timeline-item completed">
+                            <div class="timeline-header">
+                                <span class="timeline-title">合规部门审批</span>
+                                <span class="timeline-date">2025-04-06 11:30:22</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-green">
+                                    <span class="tag-icon">✓</span>
+                                    已通过
+                                </div>
+                                <div style="margin-top: 8px; font-style: italic; color: #666;">
+                                    <small>注：该节点属于"全部批准"的并行节点组。</small>
+                                </div>
+                            </div>
+                            <div class="approver-info">
+                                <div class="approver">
+                                    <div>
+                                        <div class="approver-name">孙七（合规经理）</div>
+                                        <div class="approver-comment">合规记录良好，无风险事项。该员工在合规培训中表现积极，对监管政策理解到位。</div>
+                                    </div>
+                                    <div class="tag tag-green">已批准</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤4详情：条件节点 -->
+                <div id="step-content-4" class="step-content">
+                    <div class="timeline">
+                        <div class="timeline-item completed">
+                            <div class="timeline-header">
+                                <span class="timeline-title">晋升级别检查</span>
+                                <span class="timeline-date">2025-04-06 13:00:05</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-blue">系统自动处理</div>
+                                <div style="margin-top: 8px;">
+                                    <div>条件判断详情：</div>
+                                    <div style="margin-top: 8px; background-color: #f5f5f5; padding: 12px; border-radius: 4px; font-family: 'Courier New', monospace;">
+                                        <div>当前申请目标级别: <strong>高级信贷员</strong></div>
+                                        <div style="margin-top: 4px;">条件表达式: <code>#{form.targetLevel == 'SENIOR'}</code></div>
+                                        <div style="margin-top: 4px;">执行结果: <span style="color: var(--success-color);">✓ 条件满足</span></div>
+                                        <div style="margin-top: 4px;">流转决策: <strong>→ 流转至"总监审批"节点</strong></div>
+                                    </div>
+                                    <div style="margin-top: 8px; font-style: italic; color: #666;">
+                                        <small>注：系统根据晋升级别自动选择不同的审批路径。高级及以上晋升需要总监审批，中级晋升需要部门经理审批，初级晋升直接到HR确认。</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤5详情：当前进行 -->
+                <div id="step-content-5" class="step-content">
+                    <div class="timeline">
+                        <div class="timeline-item active">
+                            <div class="timeline-header">
+                                <span class="timeline-title">总监审批</span>
+                                <span class="timeline-date">2025-04-06 13:15:30</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-blue">
+                                    <span class="tag-icon">⏳</span>
+                                    处理中
+                                </div>
+                                <div><small>等待以下任一总监完成审批...</small></div>
+                            </div>
+                            <div class="approver-info">
+                                <div class="approver">
+                                    <div>
+                                        <div class="approver-name">周八（业务总监）</div>
+                                        <div class="approver-comment">-</div>
+                                    </div>
+                                    <div class="tag tag-blue">待审批</div>
+                                </div>
+                                <div class="approver">
+                                    <div>
+                                        <div class="approver-name">吴九（风控总监）</div>
+                                        <div class="approver-comment">-</div>
+                                    </div>
+                                    <div class="tag tag-blue">待审批</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 步骤6详情：未开始 -->
+                <div id="step-content-6" class="step-content">
+                    <div class="timeline">
+                        <div class="timeline-item future">
+                            <div class="timeline-header">
+                                <span class="timeline-title">人力资源确认</span>
+                                <span class="timeline-date">-</span>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="tag tag-gray">
+                                    <span class="tag-icon">⏳</span>
+                                    未开始
+                                </div>
+                                <div style="margin-top: 8px; font-style: italic; color: #666;">
+                                    <small>注：该节点为流程的最后一步，由人力资源部门最终确认晋升事宜，包括确定实际生效日期、薪资调整等。</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 操作历史卡片 -->
+        <div class="card">
+            <h2 class="card-title">操作历史</h2>
+            <div class="timeline">
+                <div class="timeline-item completed">
+                    <div class="timeline-header">
+                        <span class="timeline-title">流程启动</span>
+                        <span class="timeline-date">2025-04-05 09:30:25</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>张三创建了晋升申请</div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item completed">
+                    <div class="timeline-header">
+                        <span class="timeline-title">部门初审</span>
+                        <span class="timeline-date">2025-04-05 10:15:30</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>李四（部门经理）批准了申请</div>
+                        <div class="approver-comment">员工表现优秀，符合晋升条件，同意晋升申请。</div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item completed">
+                    <div class="timeline-header">
+                        <span class="timeline-title">业务部门审批</span>
+                        <span class="timeline-date">2025-04-05 14:20:15</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>王五（业务经理）批准了申请</div>
+                        <div class="approver-comment">业务能力强，客户满意度高，同意晋升。</div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item completed">
+                    <div class="timeline-header">
+                        <span class="timeline-title">风控部门审批</span>
+                        <span class="timeline-date">2025-04-05 15:30:45</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>系统自动跳过（并行节点ANY策略）</div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item completed">
+                    <div class="timeline-header">
+                        <span class="timeline-title">法务部门审批</span>
+                        <span class="timeline-date">2025-04-06 09:45:10</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>赵六（法务经理）批准了申请</div>
+                        <div class="approver-comment">无法律风险，符合合规要求。</div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item completed">
+                    <div class="timeline-header">
+                        <span class="timeline-title">合规部门审批</span>
+                        <span class="timeline-date">2025-04-06 11:30:22</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>孙七（合规经理）批准了申请</div>
+                        <div class="approver-comment">合规记录良好，无风险事项。</div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item completed">
+                    <div class="timeline-header">
+                        <span class="timeline-title">级别检查</span>
+                        <span class="timeline-date">2025-04-06 13:00:05</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>系统自动执行级别检查</div>
+                        <div>检查结果: 高级晋升路径，流转至总监审批</div>
+                    </div>
+                </div>
+                
+                <div class="timeline-item active">
+                    <div class="timeline-header">
+                        <span class="timeline-title">总监审批</span>
+                        <span class="timeline-date">2025-04-06 13:15:30</span>
+                    </div>
+                    <div class="timeline-content">
+                        <div>系统分配审批任务给总监</div>
+                        <div>等待总监审批中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 初始化：默认展示表单提交节点
+        document.addEventListener('DOMContentLoaded', function() {
+            showStepDetail(0);
+        });
+        
+        // 点击步骤显示详情
+        function showStepDetail(stepIndex) {
+            // 隐藏所有详情内容
+            const allContents = document.querySelectorAll('.step-content');
+            allContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 显示选中的详情内容
+            const selectedContent = document.getElementById(`step-content-${stepIndex}`);
+            if (selectedContent) {
+                selectedContent.classList.add('active');
+            }
+            
+            // 移除所有步骤的高亮
+            const allSteps = document.querySelectorAll('.step');
+            allSteps.forEach(step => {
+                step.classList.remove('highlighted');
+            });
+            
+            // 高亮当前选中的步骤
+            const selectedStep = document.querySelector(`.step[data-step="${stepIndex}"]`);
+            if (selectedStep) {
+                selectedStep.classList.add('highlighted');
+            }
+        }
+    </script>
+</body>
+</html>

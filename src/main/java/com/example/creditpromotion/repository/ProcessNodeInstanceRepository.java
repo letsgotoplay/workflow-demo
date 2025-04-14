@@ -50,4 +50,7 @@ public interface ProcessNodeInstanceRepository extends JpaRepository<ProcessNode
     List<ProcessNodeInstance> findByNodeDefinitionId(Long nodeDefinitionId);
 
     Optional<ProcessNodeInstance> findByProcessInstanceIdAndNodeDefinitionId(Long instanceID, Long definitionID);
+
+    Optional<ProcessNodeInstance> findByProcessInstanceIdAndNodeDefinitionIdAndNodeStatus(Long instanceID, Long currentNodeDefId,
+            NodeInstanceStatus inProgress);
 }

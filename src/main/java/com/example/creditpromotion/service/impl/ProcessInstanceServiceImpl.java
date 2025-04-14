@@ -62,12 +62,8 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         ProcessInstance instance = createProcessInstanceEntity(request, processDefinition, startNodeDef);
 
         // 创建开始节点实例
-        ProcessNodeInstance startNodeInstance = createStartNodeInstance(instance, startNodeDef,
-                request.getApplyUserName(), null);
-
-        // 创建开始节点的审批人实例（申请人自己）
-        createStartNodeApproverInstance(startNodeInstance, request.getApplyUserId(), request.getApplyUserName());
-
+         createNodeInstance(instance.getId(), startNodeDef.getId(), null);
+       
         // 保存预选审批人（如果有）
         savePreselectedApprovers(instance.getId(), request.getPreselectedApprovers());
 
@@ -185,7 +181,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
     private NodeApproverInstance createStartNodeApproverInstance(ProcessNodeInstance nodeInstance,
             Long approverId,
             String approverName) {
-                //TODO: CREATEDBY SHOULD BE USERID
+        // TODO: CREATEDBY SHOULD BE USERID
         NodeApproverInstance approverInstance = new NodeApproverInstance();
         approverInstance.setId(idGenerator.nextId());
         approverInstance.setNodeInstanceId(nodeInstance.getId());
@@ -196,7 +192,6 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         approverInstance.setCreatedBy(approverName);
         approverInstance.setCreatedTime(LocalDateTime.now());
         approverInstance.setAssignTime(LocalDateTime.now());
-        
 
         // 保存审批人实例
         return approverInstanceRepository.save(approverInstance);
@@ -560,6 +555,8 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
     @Override
     public ProcessInstanceDetailResponse getProcessInstanceDetail(Long id) {
+        //TODO:  too complex and no need on this implementation. return process instance, node info, also possible allowed actions as well as first matched approver instance info.
+        // TODO:  if ui send exact approver instance id, then we know exact approver instance, the following action will be for that approver instance only in case of multiple has permission approval instance.
         // 查找流程实例
         ProcessInstance instance = processInstanceRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_INSTANCE_NOT_FOUND));
@@ -724,6 +721,125 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         // 转换为响应DTO
         return page.map(this::convertToListResponse);
     }
+   
+/**
+ * Get allowed actions for the current user on a process instance
+ * Follows these rules:
+ * 1. If current node is start node: SUBMIT, CANCEL are allowed
+ * 2. If not start node: APPROVE, REJECT, REWORK, TRANSFER are allowed when user is an eligible approver
+ * 3. User can only approve once - no actions allowed after approval
+ * 
+ * @param processInstanceId Process instance ID
+ * @return List of allowed actions
+ */
+@Override
+public List<ActionType> getAllowedActionsForCurrentUser(Long processInstanceId) {
+     // Get current user ID and roles
+     Long currentUserId = SecurityUtil.getCurrentUserId();
+     Set<String> userRoles = SecurityUtil.getCurrentUserRoles();
+
+     // Get the process instance
+     ProcessInstance instance = processInstanceRepository.findById(processInstanceId)
+             .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_INSTANCE_NOT_FOUND));
+     
+     // If process is not DRAFT, REWORK or IN_PROGRESS, no actions allowed
+     if (instance.getStatus() != ProcessInstanceStatus.DRAFT && 
+         instance.getStatus() != ProcessInstanceStatus.REWORK && 
+         instance.getStatus() != ProcessInstanceStatus.IN_PROGRESS) {
+         return Collections.emptyList();
+     }
+     
+     // Find the current active node
+     ProcessNodeInstance currentNode = findCurrentActiveNode(instance);
+     if (currentNode == null) {
+         // No active node found
+         return Collections.emptyList();
+     }
+     
+     // Get node definition to check if it's a start node
+     ApprovalNodeDefinition nodeDef = nodeDefinitionRepository.findById(currentNode.getNodeDefinitionId())
+             .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND));
+     
+     // Case 1: Start node
+     if (nodeDef.isStartNode()) {
+         // For start node, only the applicant can submit/cancel
+         if (instance.getApplyUserId().equals(currentUserId) || SecurityUtil.isAdmin()) {
+             // Only allow SUBMIT/CANCEL if node is in progress and in DRAFT/REWORK status
+             if (currentNode.getNodeStatus() == NodeInstanceStatus.IN_PROGRESS &&
+                 (instance.getStatus() == ProcessInstanceStatus.DRAFT || 
+                  instance.getStatus() == ProcessInstanceStatus.REWORK)) {
+                 return Arrays.asList(ActionType.SUBMIT, ActionType.CANCEL);
+             }
+         }
+         return Collections.emptyList();
+     }
+     
+     // Case 2: Regular approval node
+     // Check if user has already approved this node
+     boolean hasAlreadyApproved = approverInstanceRepository
+             .findByNodeInstanceIdAndApproverId(currentNode.getId(), currentUserId)
+             .filter(approver -> approver.getApprovalStatus() != ApprovalStatus.PENDING)
+             .isPresent();
+     
+     if (hasAlreadyApproved) {
+         // User has already taken action on this node
+         return Collections.emptyList();
+     }
+     
+     // Get all pending approver instances for this node
+     List<NodeApproverInstance> pendingApprovers = approverInstanceRepository
+             .findByNodeInstanceIdAndApprovalStatus(currentNode.getId(), ApprovalStatus.PENDING);
+     
+     // Check if the user is eligible for any of the pending approver instances
+     boolean isEligibleApprover = pendingApprovers.stream().anyMatch(approver -> {
+         // Direct user assignment
+         if (approver.getApproverType() == ApproverType.USER && 
+             currentUserId.equals(approver.getApproverId())) {
+             return true;
+         }
+         
+         // Role-based assignment
+         if (approver.getApproverType() == ApproverType.ROLE && 
+             approver.getRoleId() != null && 
+             userRoles.contains(approver.getRoleId())) {
+             return true;
+         }
+         // Expression-based assignment (simplified check)
+         if (approver.getApproverType() == ApproverType.EXPRESSION && 
+             StringUtils.hasText(approver.getExpression())) {
+             // Prepare variables for expression evaluation
+             Map<String, Object> variables = buildExpressionContext();
+
+             // Evaluate the expression using SpEL
+             boolean hasPermission = false;
+             try {
+                 hasPermission = spelExpressionService.evaluateBoolean(approver.getExpression(), variables);
+             } catch (Exception e) {
+                 log.error("Error evaluating expression permission: " + approver.getExpression(), e);
+                 throw new BusinessException(ErrorCode.EXPRESSION_EVALUATION_ERROR, "表达式权限评估错误");
+             }
+
+             return hasPermission;
+         }
+         
+         return false;
+     });
+     
+     // If user is eligible to approve, return appropriate actions
+     if (isEligibleApprover || SecurityUtil.isAdmin()) {
+         List<ActionType> actions = new ArrayList<>();
+         actions.add(ActionType.APPROVE);
+         actions.add(ActionType.REJECT);
+         actions.add(ActionType.REWORK);
+         // Add TRANSFER - assuming it's always allowed
+         actions.add(ActionType.TRANSFER);
+         
+         return actions;
+     }
+     
+     // No actions allowed
+     return Collections.emptyList();
+}
 
     /**
      * 处理同意操作
@@ -862,112 +978,120 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
         ApprovalNodeDefinition nodeDef = nodeDefinitionRepository.findById(nodeInstance.getNodeDefinitionId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND));
 
-        // 查询重做配置
+        // Determine the rework target node
+        Long reworkTargetNodeId = determineReworkTargetNode(nodeDef, targetNodeId, nodeInstance);
+
+        // Get target node definition to check if it's a start node
+        ApprovalNodeDefinition targetNodeDef = nodeDefinitionRepository.findById(reworkTargetNodeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND));
+
+        // Update process instance status and current node
+        boolean isReworkToStartNode = targetNodeDef.isStartNode();
+        if (isReworkToStartNode) {
+            // For rework to start node, set status to REWORK
+            instance.setStatus(ProcessInstanceStatus.REWORK);
+        } else {
+            // For rework to other nodes, keep status as IN_PROGRESS
+            instance.setStatus(ProcessInstanceStatus.IN_PROGRESS);
+        }
+
+        instance.setCurrentNodeId(reworkTargetNodeId);
+        instance.setReworkCount(instance.getReworkCount() + 1);
+        instance.setUpdatedBy(SecurityUtil.getCurrentUsername());
+        instance.setUpdatedTime(LocalDateTime.now());
+        processInstanceRepository.save(instance);
+
+        // Create target node instance
+        createNodeInstance(instance.getId(), reworkTargetNodeId, nodeInstance.getId());
+
+        // Record approval action
+        createApprovalRecord(instance.getId(), nodeInstance.getId(), approverInstance.getId(),
+                approverInstance.getApproverId(), approverInstance.getApproverName(),
+                ActionType.REWORK, ActionStatus.SUCCESS, comment);
+
+        // Record operation log with details
+        Map<String, Object> details = new HashMap<>();
+        details.put("targetNodeId", reworkTargetNodeId);
+        details.put("isStartNode", isReworkToStartNode);
+        details.put("reworkType", getReworkType(nodeDef, targetNodeId).name());
+
+        createOperationLog(instance.getId(), nodeInstance.getId(), OperationType.REWORK,
+                approverInstance.getApproverId(), approverInstance.getApproverName(), details);
+
+        return true;
+    }
+
+    /**
+     * Determines the appropriate rework target node based on configuration and
+     * input
+     */
+    private Long determineReworkTargetNode(ApprovalNodeDefinition nodeDef, Long targetNodeId,
+            ProcessNodeInstance nodeInstance) {
+        // If target node specified in request, validate it
+        if (targetNodeId != null) {
+            return targetNodeId;
+        }
+        // Query rework configuration for this node
         List<ReworkConfiguration> reworkConfigs = reworkConfigRepository.findByNodeId(nodeDef.getId());
+
+        // If no rework configuration exists, default to sending back to initiator
+        // (start node)
         if (reworkConfigs.isEmpty()) {
-            throw new BusinessException(ErrorCode.REWORK_CONFIG_NOT_FOUND);
+            ApprovalNodeDefinition startNodeDef = findStartNodeDefinition(nodeDef.getProcessDefinitionId());
+            return startNodeDef.getId();
         }
 
         ReworkConfiguration reworkConfig = reworkConfigs.get(0);
-        Long reworkTargetNodeId = null;
 
-        // 确定重做目标节点
+        // Otherwise determine target node based on configuration
+        switch (reworkConfig.getReworkType()) {
+            case TO_INITIATOR:
+                // Rework to initiator means going back to the start node
+                ApprovalNodeDefinition startNodeDef = findStartNodeDefinition(nodeDef.getProcessDefinitionId());
+                return startNodeDef.getId();
+
+            case TO_PREV_NODE:
+                // Rework to previous node
+                if (nodeInstance.getPrevNodeInstanceId() == null) {
+                    throw new BusinessException(ErrorCode.PREV_NODE_NOT_FOUND);
+                }
+
+                ProcessNodeInstance prevNodeInstance = nodeInstanceRepository
+                        .findById(nodeInstance.getPrevNodeInstanceId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
+
+                return prevNodeInstance.getNodeDefinitionId();
+
+            case TO_SPECIFIC_NODE:
+                // Rework to specific configured node
+                if (reworkConfig.getTargetNodeId() == null) {
+                    throw new BusinessException(ErrorCode.REWORK_TARGET_NOT_SPECIFIED);
+                }
+                return reworkConfig.getTargetNodeId();
+
+            default:
+                throw new BusinessException(ErrorCode.INVALID_REWORK_TYPE);
+        }
+    }
+
+    /**
+     * Gets the effective rework type being applied
+     */
+    private ReworkType getReworkType(ApprovalNodeDefinition nodeDef, Long targetNodeId) {
+        List<ReworkConfiguration> reworkConfigs = reworkConfigRepository.findByNodeId(nodeDef.getId());
+
+        // If no config, it's implicitly TO_INITIATOR
+        if (reworkConfigs.isEmpty()) {
+            return ReworkType.TO_INITIATOR;
+        }
+
+        // If target specified, it's TO_SPECIFIC_NODE
         if (targetNodeId != null) {
-            // 如果前端指定了目标节点，验证是否在允许范围内
-            if (reworkConfig.getReworkType() != ReworkType.TO_SPECIFIC_NODE ||
-                    !targetNodeId.equals(reworkConfig.getTargetNodeId())) {
-                throw new BusinessException(ErrorCode.INVALID_REWORK_TARGET);
-            }
-            reworkTargetNodeId = targetNodeId;
-        } else {
-            // 根据重做类型确定目标节点
-            switch (reworkConfig.getReworkType()) {
-                case TO_INITIATOR:
-                    // 重做到发起人，直接将流程状态改为REWORK
-                    // TODO: 实现重做到发起人 approver and instance to start node
-                    instance.setStatus(ProcessInstanceStatus.REWORK);
-                    instance.setCurrentNodeId(null); // to start node def id
-                    instance.setReworkCount(instance.getReworkCount() + 1);
-                    instance.setUpdatedBy(SecurityUtil.getCurrentUsername());
-                    instance.setUpdatedTime(LocalDateTime.now());
-
-                    processInstanceRepository.save(instance);
-
-                    // 记录审批记录
-                    createApprovalRecord(instance.getId(), nodeInstance.getId(), approverInstance.getId(),
-                            approverInstance.getApproverId(), approverInstance.getApproverName(),
-                            ActionType.REWORK, ActionStatus.SUCCESS, comment);
-
-                    // 记录操作日志
-                    createOperationLog(instance.getId(), nodeInstance.getId(), OperationType.REWORK,
-                            approverInstance.getApproverId(), approverInstance.getApproverName());
-
-                    return true;
-
-                case TO_PREV_NODE:
-                    // 重做到上一节点
-                    if (nodeInstance.getPrevNodeInstanceId() == null) {
-                        throw new BusinessException(ErrorCode.PREV_NODE_NOT_FOUND);
-                    }
-
-                    ProcessNodeInstance prevNodeInstance = nodeInstanceRepository
-                            .findById(nodeInstance.getPrevNodeInstanceId())
-                            .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
-
-                    reworkTargetNodeId = prevNodeInstance.getNodeDefinitionId();
-                    break;
-
-                case TO_SPECIFIC_NODE:
-                    // 重做到指定节点
-                    if (reworkConfig.getTargetNodeId() == null) {
-                        throw new BusinessException(ErrorCode.REWORK_TARGET_NOT_SPECIFIED);
-                    }
-                    reworkTargetNodeId = reworkConfig.getTargetNodeId();
-                    break;
-
-                default:
-                    throw new BusinessException(ErrorCode.INVALID_REWORK_TYPE);
-            }
+            return ReworkType.TO_SPECIFIC_NODE;
         }
 
-        // 如果有确定的目标节点，创建新的节点实例
-        if (reworkTargetNodeId != null) {
-            // 查找目标节点定义
-            ApprovalNodeDefinition targetNodeDef = nodeDefinitionRepository.findById(reworkTargetNodeId)
-                    .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND));
-            
-            // 如果目标节点是开始节点，将流程状态设置为REWORK，否则设置为IN_PROGRESS
-            if (targetNodeDef.isStartNode()) {
-                instance.setStatus(ProcessInstanceStatus.REWORK);
-            } else {
-                instance.setStatus(ProcessInstanceStatus.IN_PROGRESS);
-            }
-            
-            instance.setCurrentNodeId(reworkTargetNodeId);
-            instance.setReworkCount(instance.getReworkCount() + 1);
-            instance.setUpdatedBy(SecurityUtil.getCurrentUsername());
-            instance.setUpdatedTime(LocalDateTime.now());
-
-            processInstanceRepository.save(instance);
-
-            // 创建目标节点实例
-            createNodeInstance(instance.getId(), reworkTargetNodeId, nodeInstance.getId());
-
-            // 记录审批记录
-            createApprovalRecord(instance.getId(), nodeInstance.getId(), approverInstance.getId(),
-                    approverInstance.getApproverId(), approverInstance.getApproverName(),
-                    ActionType.REWORK, ActionStatus.SUCCESS, comment);
-
-            // 记录操作日志
-            Map<String, Object> details = new HashMap<>();
-            details.put("targetNodeId", reworkTargetNodeId);
-            details.put("reworkType", reworkConfig.getReworkType().name());
-
-            createOperationLog(instance.getId(), nodeInstance.getId(), OperationType.REWORK,
-                    approverInstance.getApproverId(), approverInstance.getApproverName(), details);
-        }
-
-        return true;
+        // Otherwise return the configured type
+        return reworkConfigs.get(0).getReworkType();
     }
 
     /**
@@ -1264,7 +1388,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
     private ProcessNodeInstance createNodeInstance(
             Long processInstanceId, Long nodeDefinitionId, Long prevNodeInstanceId, Long parentNodeInstanceId) {
-
+// TODO: CREATEDBY SHOULD BE USERID not name
         // 查找节点定义
         ApprovalNodeDefinition nodeDef = nodeDefinitionRepository.findById(nodeDefinitionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND));
@@ -1302,6 +1426,17 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
      * 创建审批人实例
      */
     private void createApproverInstances(Long nodeInstanceId, Long nodeDefinitionId, Long processInstanceId) {
+        // Query node definition
+        ApprovalNodeDefinition nodeDef = nodeDefinitionRepository.findById(nodeDefinitionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NODE_DEFINITION_NOT_FOUND));
+
+        // Special handling for start nodes - they should always use the original
+        // applicant
+        if (nodeDef.isStartNode()) {
+            createStartNodeApprovers(nodeInstanceId, processInstanceId);
+            return;
+        }
+
         // 查询节点审批人定义
         List<NodeApproverDefinition> approverDefs = nodeApproverRepository.findByNodeId(nodeDefinitionId);
 
@@ -1315,31 +1450,7 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
 
         // 如果有预选审批人，使用预选审批人
         if (!preselectedApprovers.isEmpty()) {
-            for (PreselectedApprover preselected : preselectedApprovers) {
-                NodeApproverInstance approverInstance = new NodeApproverInstance();
-                approverInstance.setId(idGenerator.nextId());
-                approverInstance.setNodeInstanceId(nodeInstanceId);
-                approverInstance.setApproverId(preselected.getApproverId());
-                approverInstance.setApproverName(preselected.getApproverName());
-                approverInstance.setApproverType(ApproverType.USER); // 预选的一般是具体用户
-                approverInstance.setApprovalStatus(ApprovalStatus.PENDING);
-                approverInstance.setAssignTime(LocalDateTime.now());
-                approverInstance.setIsPreselected(1); // 标记为预选
-
-                // 设置超时时间（继承节点实例的超时时间）
-                ProcessNodeInstance nodeInstance = nodeInstanceRepository.findById(nodeInstanceId)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
-                if (nodeInstance.getDueTime() != null) {
-                    approverInstance.setDueTime(nodeInstance.getDueTime());
-                }
-
-                // 设置元数据
-                String currentUsername = SecurityUtil.getCurrentUsername();
-                approverInstance.setCreatedBy(currentUsername);
-                approverInstance.setCreatedTime(LocalDateTime.now());
-
-                approverInstanceRepository.save(approverInstance);
-            }
+            createPreselectedApprovers(nodeInstanceId, preselectedApprovers);
         }
         // 没有预选审批人，根据定义创建
         else if (!approverDefs.isEmpty()) {
@@ -1383,11 +1494,76 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
     }
 
     /**
+     * Creates approver instances for a start node during rework, using the original
+     * applicant
+     */
+    private void createStartNodeApprovers(Long nodeInstanceId, Long processInstanceId) {
+        // Find process instance to get original applicant
+        ProcessInstance instance = processInstanceRepository.findById(processInstanceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROCESS_INSTANCE_NOT_FOUND));
+
+        // Create approver instance for the original applicant
+        NodeApproverInstance approverInstance = new NodeApproverInstance();
+        approverInstance.setId(idGenerator.nextId());
+        approverInstance.setNodeInstanceId(nodeInstanceId);
+        approverInstance.setApproverId(instance.getApplyUserId());
+        approverInstance.setApproverName(instance.getApplyUserName());
+        approverInstance.setApproverType(ApproverType.USER);
+        approverInstance.setApprovalStatus(ApprovalStatus.PENDING);
+        approverInstance.setAssignTime(LocalDateTime.now());
+
+        // Set timeout (inherit from node instance)
+        ProcessNodeInstance nodeInstance = nodeInstanceRepository.findById(nodeInstanceId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
+        if (nodeInstance.getDueTime() != null) {
+            approverInstance.setDueTime(nodeInstance.getDueTime());
+        }
+
+        // Set metadata
+        String currentUsername = SecurityUtil.getCurrentUsername();
+        approverInstance.setCreatedBy(currentUsername);
+        approverInstance.setCreatedTime(LocalDateTime.now());
+
+        approverInstanceRepository.save(approverInstance);
+
+        log.info("Created start node approver instance for original applicant during rework: {}",
+                instance.getApplyUserName());
+    }
+
+    private void createPreselectedApprovers(Long nodeInstanceId, List<PreselectedApprover> preselectedApprovers) {
+        for (PreselectedApprover preselected : preselectedApprovers) {
+            NodeApproverInstance approverInstance = new NodeApproverInstance();
+            approverInstance.setId(idGenerator.nextId());
+            approverInstance.setNodeInstanceId(nodeInstanceId);
+            approverInstance.setApproverId(preselected.getApproverId());
+            approverInstance.setApproverName(preselected.getApproverName());
+            approverInstance.setApproverType(ApproverType.USER); // 预选的一般是具体用户
+            approverInstance.setApprovalStatus(ApprovalStatus.PENDING);
+            approverInstance.setAssignTime(LocalDateTime.now());
+            approverInstance.setIsPreselected(1); // 标记为预选
+
+            // 设置超时时间（继承节点实例的超时时间）
+            ProcessNodeInstance nodeInstance = nodeInstanceRepository.findById(nodeInstanceId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.NODE_INSTANCE_NOT_FOUND));
+            if (nodeInstance.getDueTime() != null) {
+                approverInstance.setDueTime(nodeInstance.getDueTime());
+            }
+
+            // 设置元数据
+            String currentUsername = SecurityUtil.getCurrentUsername();
+            approverInstance.setCreatedBy(currentUsername);
+            approverInstance.setCreatedTime(LocalDateTime.now());
+
+            approverInstanceRepository.save(approverInstance);
+        }
+    }
+
+    /**
      * 创建具体用户的审批人实例
      */
     private void createUserApprover(Long nodeInstanceId, NodeApproverDefinition approverDef) {
         // 实际项目中需要查询用户信息
-        // TODO: CREATED BY SHOULD BE USER ID 
+        // TODO: CREATED BY SHOULD BE USER ID
         Long approverId = Long.parseLong(approverDef.getApproverId());
         String approverName = "User " + approverId; // TODO: 实际项目中应查询用户名称
 
@@ -1533,6 +1709,47 @@ public class ProcessInstanceServiceImpl implements ProcessInstanceService {
             log.info("Created expression-based approver instance with expression: {}", expression);
         }
     }
+/**
+ * Find the current active node for a process instance
+ * No support for parallel nodes
+ * @param instance Process instance
+ * @return Current active node instance
+ */
+private ProcessNodeInstance findCurrentActiveNode(ProcessInstance instance) {
+    // If current node ID is set, try to find the active node instance
+    if (instance.getCurrentNodeId() != null) {
+        Optional<ProcessNodeInstance> activeNode = nodeInstanceRepository
+                .findByProcessInstanceIdAndNodeDefinitionIdAndNodeStatus(
+                    instance.getId(), 
+                    instance.getCurrentNodeId(),
+                    NodeInstanceStatus.IN_PROGRESS);
+        
+        if (activeNode.isPresent()) {
+            return activeNode.get();
+        }
+    }
+    
+    // For DRAFT/REWORK status, find the start node
+    if (instance.getStatus() == ProcessInstanceStatus.DRAFT || 
+        instance.getStatus() == ProcessInstanceStatus.REWORK) {
+        
+        // Find start node definition
+        ApprovalNodeDefinition startNodeDef = nodeDefinitionRepository
+                .findByProcessDefinitionIdAndIsStartNode(instance.getProcessDefinitionId(), 1)
+                .orElse(null);
+        
+        if (startNodeDef != null) {
+            // Find or create start node instance
+            Optional<ProcessNodeInstance> startNodeOpt = nodeInstanceRepository
+                    .findByProcessInstanceIdAndNodeDefinitionId(
+                        instance.getId(), startNodeDef.getId());
+            
+            return startNodeOpt.orElse(null);
+        }
+    }
+    
+    return null;
+}
 
     /**
      * 记录审批记录

@@ -54,4 +54,9 @@ public interface NodeApproverInstanceRepository extends JpaRepository<NodeApprov
     List<NodeApproverInstance> findPendingTasksByApproverId(@Param("approverId") Long approverId);
 
     Optional<NodeApproverInstance> findByNodeInstanceIdAndApproverId(Long id, Long currentUserId);
+
+    Optional<ProcessDefinition> findByNodeInstanceIdAndApproverIdAndApprovalStatus(Long id, Long currentUserId,
+            ApprovalStatus pending);
+
+    List<NodeApproverInstance> findByNodeInstanceIdAndApprovalStatus(Long id, ApprovalStatus status);
 }
