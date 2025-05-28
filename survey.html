@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Survey - Survey Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-poll-h text-indigo-600 text-2xl mr-3"></i>
+                    <h1 class="text-xl font-semibold text-gray-900">Survey Management System</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-500">Admin Portal</span>
+                    <div class="flex items-center space-x-2">
+                        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=faces" 
+                             class="w-8 h-8 rounded-full" alt="Admin">
+                        <span class="text-sm font-medium text-gray-700">John Smith</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-8 py-6">
+        <!-- Page Header -->
+        <div class="mb-6">
+            <div class="flex items-center mb-2">
+                <a href="#" class="text-gray-500 hover:text-gray-700 mr-4">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <h2 class="text-2xl font-bold text-gray-900">Send Survey</h2>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <div class="bg-white shadow-sm rounded-lg">
+            <!-- Survey Selection -->
+            <div class="p-6 border-b border-gray-200">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Select Survey Template <span class="text-red-500">*</span>
+                </label>
+                <select id="surveySelect" class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" onchange="handleSurveyChange()">
+                    <option value="">Choose a survey template...</option>
+                    <option value="nomination">Nomination Survey</option>
+                    <option value="satisfaction">Employee Satisfaction Survey</option>
+                    <option value="performance">Performance Review Survey</option>
+                    <option value="360feedback">360 Degree Feedback</option>
+                    <option value="skills">Skills Assessment Survey</option>
+                </select>
+            </div>
+
+            <!-- Dynamic Configuration Section -->
+            <div id="configSection" class="hidden">
+                <!-- Nomination Survey Configuration -->
+                <div id="nominationConfig" class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Configure Survey Participants</h3>
+                    
+                    <!-- Recipient Type Selection -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Who will complete this survey?</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <button type="button" onclick="selectRecipientType('manager')" class="recipient-btn active p-4 border-2 border-indigo-500 bg-indigo-50 rounded-lg text-left transition-all">
+                                <div class="flex items-start space-x-3">
+                                    <i class="fas fa-user-tie text-indigo-600 text-xl"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Manager</p>
+                                        <p class="text-sm text-gray-600 mt-1">Manager evaluates direct report</p>
+                                    </div>
+                                </div>
+                            </button>
+                            <button type="button" onclick="selectRecipientType('admingroup')" class="recipient-btn p-4 border-2 border-gray-200 rounded-lg text-left hover:border-gray-300 transition-all">
+                                <div class="flex items-start space-x-3">
+                                    <i class="fas fa-users-cog text-gray-400 text-xl"></i>
+                                    <div>
+                                        <p class="font-medium text-gray-700">Admin Group</p>
+                                        <p class="text-sm text-gray-600 mt-1">For offline data collection</p>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Manager Selection -->
+                    <div id="managerSelection" class="space-y-6">
+                        <!-- Search Manager -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Search and Select Manager <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" 
+                                       id="managerSearch"
+                                       placeholder="Type manager name or email..." 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                       onkeyup="searchManagers(this.value)">
+                                <i class="fas fa-search absolute right-3 top-3.5 text-gray-400"></i>
+                            </div>
+                            
+                            <!-- Search Results -->
+                            <div id="managerSearchResults" class="hidden mt-2 border border-gray-200 rounded-lg shadow-lg bg-white max-h-60 overflow-y-auto">
+                                <!-- Results will be populated here -->
+                            </div>
+                        </div>
+
+                        <!-- Selected Manager -->
+                        <div id="selectedManager" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Selected Manager</label>
+                            <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <img id="managerPhoto" src="" class="w-12 h-12 rounded-full mr-3" alt="Manager">
+                                    <div>
+                                        <p id="managerName" class="font-medium text-gray-900"></p>
+                                        <p id="managerTitle" class="text-sm text-gray-600"></p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="clearManager()" class="text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Direct Report Selection -->
+                        <div id="directReportSection" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Select Direct Report (Candidate) <span class="text-red-500">*</span>
+                            </label>
+                            <div id="directReportsList" class="space-y-2">
+                                <!-- Direct reports will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Group Selection -->
+                    <div id="adminGroupSelection" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Select Admin Group <span class="text-red-500">*</span>
+                        </label>
+                        <select class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Choose admin group...</option>
+                            <option value="hr-admin">HR Admin Group (5 members)</option>
+                            <option value="senior-admin">Senior Admin Group (3 members)</option>
+                            <option value="regional-admin">Regional Admin Group (8 members)</option>
+                        </select>
+                        
+                        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <p class="text-sm text-amber-800">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Admin group will collect responses offline and submit on behalf of managers
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other Survey Configuration (for non-nomination surveys) -->
+                <div id="otherSurveyConfig" class="hidden p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Select Recipients</h3>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Search and Add Recipients <span class="text-red-500">*</span>
+                        </label>
+                        <div class="border border-gray-300 rounded-lg p-3 min-h-[120px]">
+                            <div id="recipientTags" class="flex flex-wrap gap-2 mb-2">
+                                <!-- Recipients tags will appear here -->
+                            </div>
+                            <input type="text" 
+                                   placeholder="Type name or email to search..." 
+                                   class="w-full border-0 p-0 focus:outline-none text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Section -->
+                <div id="summarySection" class="hidden p-6 bg-gray-50">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Summary</h3>
+                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                        <div class="space-y-3">
+                            <!-- Survey Info -->
+                            <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                                <span class="text-sm text-gray-600">Survey Type</span>
+                                <span id="summaryType" class="text-sm font-medium text-gray-900">Nomination Survey</span>
+                            </div>
+                            
+                            <!-- Creator -->
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600">
+                                    <i class="fas fa-user-shield mr-2"></i>Survey Creator
+                                </span>
+                                <div class="flex items-center">
+                                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=24&h=24&fit=crop&crop=faces" 
+                                         class="w-6 h-6 rounded-full mr-2" alt="Creator">
+                                    <span class="text-sm font-medium text-gray-900">John Smith (You)</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Recipient -->
+                            <div class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600">
+                                    <i class="fas fa-user-edit mr-2"></i>Survey Recipient
+                                </span>
+                                <div id="summaryRecipient" class="flex items-center">
+                                    <!-- Will be populated dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Candidate (for nomination surveys) -->
+                            <div id="summaryCandidateRow" class="flex items-center justify-between py-2">
+                                <span class="text-sm text-gray-600">
+                                    <i class="fas fa-user mr-2"></i>Survey Candidate
+                                </span>
+                                <div id="summaryCandidate" class="flex items-center">
+                                    <!-- Will be populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex items-center justify-between mt-6">
+                        <button type="button" class="text-sm text-gray-600 hover:text-gray-900">
+                            <i class="fas fa-save mr-2"></i>
+                            Save as Draft
+                        </button>
+                        <div class="space-x-3">
+                            <button type="button" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" id="sendButton" disabled class="px-6 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                                <i class="fas fa-paper-plane mr-2"></i>
+                                Send Survey
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .recipient-btn.active {
+            border-color: rgb(99 102 241);
+            background-color: rgb(238 242 255);
+        }
+        .recipient-btn.active i {
+            color: rgb(99 102 241);
+        }
+    </style>
+
+    <script>
+        // Mock data for managers and their direct reports
+        const managers = [
+            {
+                id: 1,
+                name: "Michael Johnson",
+                email: "michael.johnson@company.com",
+                title: "Engineering Manager",
+                photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=faces",
+                directReports: [
+                    { id: 101, name: "Emily Chen", title: "Senior Developer", photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces" },
+                    { id: 102, name: "Robert Wilson", title: "Product Designer", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces" },
+                    { id: 103, name: "Lisa Anderson", title: "QA Engineer", photo: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=100&h=100&fit=crop&crop=faces" }
+                ]
+            },
+            {
+                id: 2,
+                name: "Sarah Martinez",
+                email: "sarah.martinez@company.com",
+                title: "Marketing Manager",
+                photo: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=faces",
+                directReports: [
+                    { id: 201, name: "James Taylor", title: "Marketing Specialist", photo: "https://images.unsplash.com/photo-1600486913747-55e5470d6f40?w=100&h=100&fit=crop&crop=faces" },
+                    { id: 202, name: "Nina Patel", title: "Content Writer", photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces" }
+                ]
+            }
+        ];
+
+        let selectedManager = null;
+        let selectedCandidate = null;
+        let currentSurveyType = null;
+
+        function handleSurveyChange() {
+            const surveySelect = document.getElementById('surveySelect');
+            const configSection = document.getElementById('configSection');
+            const nominationConfig = document.getElementById('nominationConfig');
+            const otherSurveyConfig = document.getElementById('otherSurveyConfig');
+            
+            if (!surveySelect.value) {
+                configSection.classList.add('hidden');
+                return;
+            }
+            
+            currentSurveyType = surveySelect.value;
+            configSection.classList.remove('hidden');
+            
+            if (surveySelect.value === 'nomination') {
+                nominationConfig.classList.remove('hidden');
+                otherSurveyConfig.classList.add('hidden');
+            } else {
+                nominationConfig.classList.add('hidden');
+                otherSurveyConfig.classList.remove('hidden');
+            }
+            
+            updateSummary();
+        }
+
+        function selectRecipientType(type) {
+            // Update button states
+            document.querySelectorAll('.recipient-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-indigo-500', 'bg-indigo-50');
+                btn.classList.add('border-gray-200');
+                btn.querySelector('i').classList.remove('text-indigo-600');
+                btn.querySelector('i').classList.add('text-gray-400');
+            });
+            
+            event.currentTarget.classList.add('active', 'border-indigo-500', 'bg-indigo-50');
+            event.currentTarget.classList.remove('border-gray-200');
+            event.currentTarget.querySelector('i').classList.add('text-indigo-600');
+            event.currentTarget.querySelector('i').classList.remove('text-gray-400');
+            
+            // Show/hide sections
+            document.getElementById('managerSelection').classList.toggle('hidden', type !== 'manager');
+            document.getElementById('adminGroupSelection').classList.toggle('hidden', type !== 'admingroup');
+            
+            // Clear selections when switching
+            clearManager();
+            updateSummary();
+        }
+
+        function searchManagers(query) {
+            const resultsDiv = document.getElementById('managerSearchResults');
+            
+            if (query.length < 2) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+            
+            const filteredManagers = managers.filter(m => 
+                m.name.toLowerCase().includes(query.toLowerCase()) || 
+                m.email.toLowerCase().includes(query.toLowerCase())
+            );
+            
+            if (filteredManagers.length === 0) {
+                resultsDiv.innerHTML = '<div class="p-3 text-sm text-gray-500">No managers found</div>';
+            } else {
+                resultsDiv.innerHTML = filteredManagers.map(manager => `
+                    <div class="p-3 hover:bg-gray-50 cursor-pointer flex items-center" onclick="selectManager(${manager.id})">
+                        <img src="${manager.photo}" class="w-10 h-10 rounded-full mr-3" alt="${manager.name}">
+                        <div>
+                            <p class="font-medium text-gray-900">${manager.name}</p>
+                            <p class="text-sm text-gray-600">${manager.title} • ${manager.email}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function selectManager(managerId) {
+            selectedManager = managers.find(m => m.id === managerId);
+            selectedCandidate = null;
+            
+            // Hide search results
+            document.getElementById('managerSearchResults').classList.add('hidden');
+            document.getElementById('managerSearch').value = '';
+            
+            // Show selected manager
+            document.getElementById('selectedManager').classList.remove('hidden');
+            document.getElementById('managerPhoto').src = selectedManager.photo;
+            document.getElementById('managerName').textContent = selectedManager.name;
+            document.getElementById('managerTitle').textContent = selectedManager.title;
+            
+            // Show direct reports
+            const directReportSection = document.getElementById('directReportSection');
+            const directReportsList = document.getElementById('directReportsList');
+            
+            directReportSection.classList.remove('hidden');
+            directReportsList.innerHTML = selectedManager.directReports.map(report => `
+                <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <input type="radio" name="directReport" value="${report.id}" onchange="selectCandidate(${report.id})" class="mr-3">
+                    <img src="${report.photo}" class="w-10 h-10 rounded-full mr-3" alt="${report.name}">
+                    <div>
+                        <p class="font-medium text-gray-900">${report.name}</p>
+                        <p class="text-sm text-gray-600">${report.title}</p>
+                    </div>
+                </label>
+            `).join('');
+            
+            updateSummary();
+        }
+
+        function clearManager() {
+            selectedManager = null;
+            selectedCandidate = null;
+            document.getElementById('selectedManager').classList.add('hidden');
+            document.getElementById('directReportSection').classList.add('hidden');
+            updateSummary();
+        }
+
+        function selectCandidate(candidateId) {
+            selectedCandidate = selectedManager.directReports.find(r => r.id === candidateId);
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summarySection = document.getElementById('summarySection');
+            const sendButton = document.getElementById('sendButton');
+            const summaryType = document.getElementById('summaryType');
+            const summaryRecipient = document.getElementById('summaryRecipient');
+            const summaryCandidate = document.getElementById('summaryCandidate');
+            const summaryCandidateRow = document.getElementById('summaryCandidateRow');
+            
+            if (!currentSurveyType) {
+                summarySection.classList.add('hidden');
+                return;
+            }
+            
+            summarySection.classList.remove('hidden');
+            summaryType.textContent = document.querySelector('#surveySelect option:checked').textContent;
+            
+            // Update recipient info
+            if (currentSurveyType === 'nomination' && selectedManager) {
+                summaryRecipient.innerHTML = `
+                    <img src="${selectedManager.photo}" class="w-6 h-6 rounded-full mr-2" alt="${selectedManager.name}">
+                    <span class="text-sm font-medium text-gray-900">${selectedManager.name}</span>
+                `;
+                
+                // Update candidate info
+                if (selectedCandidate) {
+                    summaryCandidateRow.classList.remove('hidden');
+                    summaryCandidate.innerHTML = `
+                        <img src="${selectedCandidate.photo}" class="w-6 h-6 rounded-full mr-2" alt="${selectedCandidate.name}">
+                        <span class="text-sm font-medium text-gray-900">${selectedCandidate.name}</span>
+                    `;
+                    sendButton.disabled = false;
+                } else {
+                    summaryCandidate.innerHTML = '<span class="text-sm text-gray-500">Not selected</span>';
+                    sendButton.disabled = true;
+                }
+            } else if (currentSurveyType === 'nomination') {
+                summaryRecipient.innerHTML = '<span class="text-sm text-gray-500">Not selected</span>';
+                summaryCandidate.innerHTML = '<span class="text-sm text-gray-500">Not selected</span>';
+                sendButton.disabled = true;
+            } else {
+                // Other survey types
+                summaryCandidateRow.classList.add('hidden');
+                summaryRecipient.innerHTML = '<span class="text-sm text-gray-500">Recipients selected: 0</span>';
+                sendButton.disabled = true;
+            }
+        }
+    </script>
+</body>
+</html>
