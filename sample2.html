@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCO Management System - Optimized</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .sidebar-active { background: #3B82F6; color: white; }
+        .level-badge { width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 11px; font-weight: 600; }
+        .segment-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 12px; font-weight: 600; padding: 2px 8px; }
+        .compact-card { transition: all 0.2s; }
+        .compact-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .tree-line { border-left: 2px solid #E5E7EB; margin-left: 20px; padding-left: 16px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 z-50">
+        <div class="flex items-center justify-between h-full px-4">
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">SC</span>
+                    </div>
+                    <h1 class="text-lg font-semibold">SCO Management</h1>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="search" placeholder="Search SCO..." class="w-64 pl-8 pr-3 py-1.5 bg-gray-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <svg class="absolute left-2.5 top-2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <button class="p-2 text-gray-600 hover:text-gray-900 relative">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                    <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                <div class="flex items-center space-x-2 pl-4 border-l border-gray-200">
+                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=faces" alt="User" class="w-8 h-8 rounded-full">
+                    <span class="text-sm font-medium">John Doe</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <nav class="fixed left-0 top-14 bottom-0 w-56 bg-white border-r border-gray-200">
+        <div class="p-3 space-y-1">
+            <a href="#dashboard" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a href="#myview" class="sidebar-active flex items-center space-x-3 px-3 py-2 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                </svg>
+                <span class="font-medium">My View</span>
+            </a>
+            <a href="#scolist" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                <span class="font-medium">SCO List</span>
+            </a>
+            <a href="#reports" class="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <span class="font-medium">Reports</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content: My View -->
+    <main class="ml-56 mt-14 p-6" id="myview">
+        <!-- Page Header with Filters -->
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">My View</h2>
+                <div class="flex items-center space-x-2">
+                    <button class="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Export
+                    </button>
+                    <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Add SCO
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Simplified Filter Bar -->
+            <div class="flex items-center space-x-3 bg-white rounded-lg border border-gray-200 p-3">
+                <select class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>All Segments</option>
+                    <option>Corporate (A)</option>
+                    <option>Retail (B)</option>
+                    <option>Investment (C)</option>
+                </select>
+                <select class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option>All Levels</option>
+                    <option>Level 1</option>
+                    <option>Level 2</option>
+                    <option>Level 3</option>
+                </select>
+                <div class="ml-auto flex items-center space-x-2">
+                    <button class="p-1.5 text-gray-600 hover:text-gray-900">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                        </svg>
+                    </button>
+                    <button class="p-1.5 text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact SCO Cards -->
+        <div class="space-y-3">
+            <!-- SCO Card 1: Level 2 with history -->
+            <div class="compact-card bg-white rounded-lg border border-gray-200 p-4 fade-in">
+                <div class="flex items-center">
+                    <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=48&h=48&fit=crop&crop=faces" alt="SCO" class="w-12 h-12 rounded-full">
+                    <div class="ml-4 flex-1">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="font-semibold">Michael Chen</h3>
+                            <span class="level-badge bg-blue-600 text-white">L2</span>
+                        </div>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="text-sm text-gray-600">SCO-2024-001</span>
+                            <div class="flex items-center space-x-1">
+                                <span class="segment-badge bg-blue-100 text-blue-700">A</span>
+                                <span class="segment-badge bg-gray-100 text-gray-600">B1</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6 text-sm">
+                        <div class="text-center">
+                            <div class="font-semibold text-green-600">98%</div>
+                            <div class="text-xs text-gray-500">Compliance</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-semibold text-blue-600">4.8</div>
+                            <div class="text-xs text-gray-500">Performance</div>
+                        </div>
+                    </div>
+                    <button class="ml-6 text-blue-600 hover:text-blue-700 font-medium text-sm">View Detail →</button>
+                </div>
+            </div>
+
+            <!-- SCO Card 2: Level 1 -->
+            <div class="compact-card bg-white rounded-lg border border-gray-200 p-4 fade-in">
+                <div class="flex items-center">
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=48&h=48&fit=crop&crop=faces" alt="SCO" class="w-12 h-12 rounded-full">
+                    <div class="ml-4 flex-1">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="font-semibold">Sarah Johnson</h3>
+                            <span class="level-badge bg-purple-600 text-white">L1</span>
+                        </div>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="text-sm text-gray-600">SCO-2024-002</span>
+                            <div class="flex items-center space-x-1">
+                                <span class="segment-badge bg-purple-100 text-purple-700">B</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6 text-sm">
+                        <div class="text-center">
+                            <div class="font-semibold text-green-600">99%</div>
+                            <div class="text-xs text-gray-500">Compliance</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-semibold text-blue-600">4.9</div>
+                            <div class="text-xs text-gray-500">Performance</div>
+                        </div>
+                    </div>
+                    <button class="ml-6 text-blue-600 hover:text-blue-700 font-medium text-sm">View Detail →</button>
+                </div>
+            </div>
+
+            <!-- SCO Card 3: Level 3 Multiple -->
+            <div class="compact-card bg-white rounded-lg border border-gray-200 p-4 fade-in">
+                <div class="flex items-center">
+                    <img src="https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=48&h=48&fit=crop&crop=faces" alt="SCO" class="w-12 h-12 rounded-full">
+                    <div class="ml-4 flex-1">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="font-semibold">David Williams</h3>
+                            <span class="level-badge bg-gray-600 text-white">L3</span>
+                        </div>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="text-sm text-gray-600">SCO-2024-003</span>
+                            <div class="flex items-center space-x-1">
+                                <span class="segment-badge bg-gray-100 text-gray-700">A1</span>
+                                <span class="segment-badge bg-gray-100 text-gray-700">B2</span>
+                                <span class="segment-badge bg-gray-100 text-gray-700">C2</span>
+                                <span class="text-xs text-amber-600 ml-1">• Upgrade eligible</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6 text-sm">
+                        <div class="text-center">
+                            <div class="font-semibold text-green-600">96%</div>
+                            <div class="text-xs text-gray-500">Compliance</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-semibold text-blue-600">4.5</div>
+                            <div class="text-xs text-gray-500">Performance</div>
+                        </div>
+                    </div>
+                    <button class="ml-6 text-blue-600 hover:text-blue-700 font-medium text-sm">View Detail →</button>
+                </div>
+            </div>
+
+            <!-- More cards... -->
+            <div class="compact-card bg-white rounded-lg border border-gray-200 p-4 fade-in">
+                <div class="flex items-center">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=48&h=48&fit=crop&crop=faces" alt="SCO" class="w-12 h-12 rounded-full">
+                    <div class="ml-4 flex-1">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="font-semibold">Robert Martinez</h3>
+                            <span class="level-badge bg-blue-600 text-white">L2</span>
+                        </div>
+                        <div class="flex items-center space-x-3 mt-1">
+                            <span class="text-sm text-gray-600">SCO-2024-004</span>
+                            <div class="flex items-center space-x-1">
+                                <span class="segment-badge bg-blue-100 text-blue-700">C</span>
+                                <span class="segment-badge bg-gray-100 text-gray-600">A3</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6 text-sm">
+                        <div class="text-center">
+                            <div class="font-semibold text-green-600">97%</div>
+                            <div class="text-xs text-gray-500">Compliance</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="font-semibold text-blue-600">4.7</div>
+                            <div class="text-xs text-gray-500">Performance</div>
+                        </div>
+                    </div>
+                    <button class="ml-6 text-blue-600 hover:text-blue-700 font-medium text-sm">View Detail →</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- SCO List View -->
+    <main class="ml-56 mt-14 p-6 hidden" id="scolist">
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold">SCO List</h2>
+                <div class="flex items-center space-x-2">
+                    <button class="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+                        </svg>
+                        Bulk Actions
+                    </button>
+                    <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Add SCO
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="w-10 px-4 py-3">
+                            <input type="checkbox" class="rounded border-gray-300">
+                        </th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SCO Information</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Business Segments</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Level & Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Performance</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Updated</th>
+                        <th class="w-20 px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <!-- Parent Row with expansion -->
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-gray-300">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=40&h=40&fit=crop&crop=faces" alt="SCO" class="w-10 h-10 rounded-full">
+                                <div>
+                                    <p class="font-medium">Michael Chen</p>
+                                    <p class="text-sm text-gray-500">SCO-2024-001</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-start space-x-2">
+                                <button class="mt-1 text-gray-400 hover:text-gray-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </button>
+                                <div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="segment-badge bg-blue-100 text-blue-700">A</span>
+                                        <span class="text-sm">Corporate Banking</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1">2 historical records</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="level-badge bg-blue-600 text-white">L2</span>
+                                <span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Active</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-4 text-sm">
+                                <div>
+                                    <span class="font-medium">98%</span>
+                                    <span class="text-gray-500 text-xs">Comp</span>
+                                </div>
+                                <div>
+                                    <span class="font-medium">4.8</span>
+                                    <span class="text-gray-500 text-xs">Perf</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Mar 1, 2024</td>
+                        <td class="px-4 py-3">
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+
+                    <!-- Expanded historical records -->
+                    <tr class="bg-gray-50">
+                        <td></td>
+                        <td colspan="6" class="px-4 py-2">
+                            <div class="tree-line space-y-2">
+                                <div class="flex items-center space-x-4 text-sm text-gray-600">
+                                    <span class="segment-badge bg-gray-100 text-gray-600">A1</span>
+                                    <span>Large Corporate</span>
+                                    <span class="text-xs">• Level 3 • Jan 2022 - Mar 2024</span>
+                                    <span class="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Historical</span>
+                                </div>
+                                <div class="flex items-center space-x-4 text-sm text-gray-600">
+                                    <span class="segment-badge bg-gray-100 text-gray-600">A2</span>
+                                    <span>Mid Corporate</span>
+                                    <span class="text-xs">• Level 3 • Jan 2022 - Mar 2024</span>
+                                    <span class="ml-auto text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">Historical</span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Regular row -->
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-gray-300">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=40&h=40&fit=crop&crop=faces" alt="SCO" class="w-10 h-10 rounded-full">
+                                <div>
+                                    <p class="font-medium">Sarah Johnson</p>
+                                    <p class="text-sm text-gray-500">SCO-2024-002</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="segment-badge bg-purple-100 text-purple-700">B</span>
+                                <span class="text-sm">Retail Banking</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="level-badge bg-purple-600 text-white">L1</span>
+                                <span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Active</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-4 text-sm">
+                                <div>
+                                    <span class="font-medium">99%</span>
+                                    <span class="text-gray-500 text-xs">Comp</span>
+                                </div>
+                                <div>
+                                    <span class="font-medium">4.9</span>
+                                    <span class="text-gray-500 text-xs">Perf</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Jan 15, 2024</td>
+                        <td class="px-4 py-3">
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+
+                    <!-- Multi-segment row -->
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <input type="checkbox" class="rounded border-gray-300">
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-3">
+                                <img src="https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=40&h=40&fit=crop&crop=faces" alt="SCO" class="w-10 h-10 rounded-full">
+                                <div>
+                                    <p class="font-medium">David Williams</p>
+                                    <p class="text-sm text-gray-500">SCO-2024-003</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-1">
+                                <span class="segment-badge bg-gray-100 text-gray-700">A1</span>
+                                <span class="segment-badge bg-gray-100 text-gray-700">B2</span>
+                                <span class="segment-badge bg-gray-100 text-gray-700">C2</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="level-badge bg-gray-600 text-white">L3</span>
+                                <span class="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">Active</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center space-x-4 text-sm">
+                                <div>
+                                    <span class="font-medium">96%</span>
+                                    <span class="text-gray-500 text-xs">Comp</span>
+                                </div>
+                                <div>
+                                    <span class="font-medium">4.5</span>
+                                    <span class="text-gray-500 text-xs">Perf</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500">Feb 15, 2024</td>
+                        <td class="px-4 py-3">
+                            <button class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                <p class="text-sm text-gray-700">
+                    Showing <span class="font-medium">1</span> to <span class="font-medium">10</span> of <span class="font-medium">248</span> results
+                </p>
+                <div class="flex items-center space-x-2">
+                    <button class="px-3 py-1 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50">Previous</button>
+                    <button class="px-3 py-1 border border-blue-600 rounded text-sm bg-blue-600 text-white">1</button>
+                    <button class="px-3 py-1 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50">2</button>
+                    <button class="px-3 py-1 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50">3</button>
+                    <button class="px-3 py-1 border border-gray-300 rounded text-sm bg-white hover:bg-gray-50">Next</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Dashboard View -->
+    <main class="ml-56 mt-14 p-6 hidden" id="dashboard">
+        <h2 class="text-xl font-bold mb-6">Dashboard</h2>
+        
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs text-green-600 font-medium">+12%</span>
+                </div>
+                <p class="text-2xl font-bold">248</p>
+                <p class="text-sm text-gray-600">Total SCOs</p>
+            </div>
+            
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs text-green-600 font-medium">+28%</span>
+                </div>
+                <p class="text-2xl font-bold">67</p>
+                <p class="text-sm text-gray-600">Quarterly Upgrades</p>
+            </div>
+            
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs text-green-600 font-medium">+5%</span>
+                </div>
+                <p class="text-2xl font-bold">96.8%</p>
+                <p class="text-sm text-gray-600">Compliance Rate</p>
+            </div>
+            
+            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xs text-red-600 font-medium">-8%</span>
+                </div>
+                <p class="text-2xl font-bold">18.4</p>
+                <p class="text-sm text-gray-600">Avg. Months to Upgrade</p>
+            </div>
+        </div>
+
+        <!-- Charts and Activities -->
+        <div class="grid grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 class="font-semibold mb-4">Segment Distribution</h3>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-24 text-sm">Corporate</div>
+                        <div class="flex-1 mx-3">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-blue-600 h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+                        <div class="w-12 text-right text-sm font-medium">112</div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-24 text-sm">Retail</div>
+                        <div class="flex-1 mx-3">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-purple-600 h-2 rounded-full" style="width: 30%"></div>
+                            </div>
+                        </div>
+                        <div class="w-12 text-right text-sm font-medium">74</div>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-24 text-sm">Investment</div>
+                        <div class="flex-1 mx-3">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-600 h-2 rounded-full" style="width: 25%"></div>
+                            </div>
+                        </div>
+                        <div class="w-12 text-right text-sm font-medium">62</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 class="font-semibold mb-4">Recent Activities</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-2 h-2 bg-blue-600 rounded-full mt-1.5"></div>
+                        <div class="flex-1">
+                            <p class="text-sm">Michael Chen upgraded to Level 2</p>
+                            <p class="text-xs text-gray-500">2 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <div class="w-2 h-2 bg-green-600 rounded-full mt-1.5"></div>
+                        <div class="flex-1">
+                            <p class="text-sm">Sarah Johnson completed compliance training</p>
+                            <p class="text-xs text-gray-500">5 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <div class="w-2 h-2 bg-purple-600 rounded-full mt-1.5"></div>
+                        <div class="flex-1">
+                            <p class="text-sm">New SCO David Williams added</p>
+                            <p class="text-xs text-gray-500">Yesterday</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- SCO Detail View -->
+    <main class="ml-56 mt-14 p-6 hidden" id="scodetail">
+        <!-- Back Button -->
+        <button class="flex items-center space-x-1 text-gray-600 hover:text-gray-900 mb-4">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            <span class="text-sm">Back to List</span>
+        </button>
+
+        <!-- Profile Header -->
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+            <div class="flex items-start justify-between">
+                <div class="flex items-start space-x-4">
+                    <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=80&h=80&fit=crop&crop=faces" alt="SCO" class="w-20 h-20 rounded-full">
+                    <div>
+                        <h1 class="text-2xl font-bold mb-1">Michael Chen</h1>
+                        <p class="text-gray-600">SCO-2024-001 • michael.chen@company.com</p>
+                        <div class="flex items-center space-x-6 mt-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="level-badge bg-blue-600 text-white">L2</span>
+                                <span class="text-sm text-gray-600">Level 2 SCO</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="segment-badge bg-blue-100 text-blue-700">A</span>
+                                <span class="segment-badge bg-gray-100 text-gray-600">B1</span>
+                                <span class="text-sm text-gray-600">2 Active Segments</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Edit Profile</button>
+            </div>
+        </div>
+
+        <!-- Three Column Layout -->
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Left: Current Status -->
+            <div>
+                <h3 class="font-semibold mb-3">Active Segments</h3>
+                <div class="space-y-3">
+                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="segment-badge bg-blue-600 text-white">A</span>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
+                        </div>
+                        <p class="font-medium text-sm">Corporate Banking</p>
+                        <p class="text-xs text-gray-600 mt-1">Level 2 • Since Mar 1, 2024</p>
+                        <div class="mt-2 pt-2 border-t border-blue-200 text-xs text-gray-600">
+                            <p>Upgraded from: A1, A2</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="segment-badge bg-gray-600 text-white">B1</span>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
+                        </div>
+                        <p class="font-medium text-sm">Retail - Premium</p>
+                        <p class="text-xs text-gray-600 mt-1">Level 3 • Since Feb 15, 2024</p>
+                    </div>
+                </div>
+                
+                <h3 class="font-semibold mt-6 mb-3">Key Metrics</h3>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Compliance</span>
+                                <span class="font-semibold">98%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                <div class="bg-green-600 h-1.5 rounded-full" style="width: 98%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>Performance</span>
+                                <span class="font-semibold">4.8/5.0</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                <div class="bg-blue-600 h-1.5 rounded-full" style="width: 96%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center: Timeline -->
+            <div>
+                <h3 class="font-semibold mb-3">Career Timeline</h3>
+                <div class="relative">
+                    <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-300"></div>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold relative z-10">L2</div>
+                            <div class="flex-1 bg-white rounded-lg p-3 border border-gray-200">
+                                <p class="font-medium text-sm">Upgraded to Level 2</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Mar 1, 2024</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs font-bold relative z-10">+</div>
+                            <div class="flex-1 bg-white rounded-lg p-3 border border-gray-200">
+                                <p class="font-medium text-sm">Added B1 Segment</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Feb 15, 2024</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs font-bold relative z-10">L3</div>
+                            <div class="flex-1 bg-white rounded-lg p-3 border border-gray-200">
+                                <p class="font-medium text-sm">Started with A1, A2</p>
+                                <p class="text-xs text-gray-500 mt-0.5">Jan 15, 2022</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Additional Info -->
+            <div>
+                <h3 class="font-semibold mb-3">Certifications</h3>
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium">Credit Risk Analysis</p>
+                            <p class="text-xs text-gray-500">Certified Jan 2024</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium">Corporate Finance</p>
+                            <p class="text-xs text-gray-500">Certified Sep 2023</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-4 h-4 rounded-full border-2 border-amber-600"></div>
+                        <div>
+                            <p class="text-sm font-medium">Advanced Compliance</p>
+                            <p class="text-xs text-gray-500">In Progress - 60%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="font-semibold mt-6 mb-3">Recent Activity</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Last Review</span>
+                        <span>Dec 15, 2023</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Training Completed</span>
+                        <span>8 of 10</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">Documents</span>
+                        <a href="#" class="text-blue-600 hover:text-blue-700">View all →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Tabs -->
+        <div class="mt-8 bg-white rounded-lg border border-gray-200">
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button class="px-6 py-3 border-b-2 border-blue-600 text-sm font-medium text-blue-600">Documents</button>
+                    <button class="px-6 py-3 border-b-2 border-transparent text-sm font-medium text-gray-600 hover:text-gray-900">Training</button>
+                    <button class="px-6 py-3 border-b-2 border-transparent text-sm font-medium text-gray-600 hover:text-gray-900">Compliance History</button>
+                </nav>
+            </div>
+            <div class="p-6">
+                <p class="text-gray-500 text-sm">Document content will be loaded here...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Navigation
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Update active state
+                document.querySelectorAll('nav a').forEach(l => l.classList.remove('sidebar-active'));
+                this.classList.add('sidebar-active');
+                
+                // Show/hide sections
+                document.querySelectorAll('main').forEach(section => section.classList.add('hidden'));
+                const target = this.getAttribute('href').substring(1);
+                const targetSection = document.getElementById(target);
+                if (targetSection) targetSection.classList.remove('hidden');
+            });
+        });
+
+        // View Detail buttons
+        document.querySelectorAll('button').forEach(btn => {
+            if (btn.textContent.includes('View Detail')) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('main').forEach(section => section.classList.add('hidden'));
+                    document.getElementById('scodetail').classList.remove('hidden');
+                });
+            }
+        });
+
+        // Back button
+        document.querySelector('#scodetail button').addEventListener('click', function() {
+            document.getElementById('scodetail').classList.add('hidden');
+            document.getElementById('myview').classList.remove('hidden');
+        });
+
+        // Table row expansion
+        document.querySelectorAll('#scolist tbody tr').forEach((row, index) => {
+            const expandBtn = row.querySelector('svg[viewBox="0 0 24 24"]');
+            if (expandBtn && expandBtn.parentElement.tagName === 'BUTTON') {
+                expandBtn.parentElement.addEventListener('click', function() {
+                    const nextRow = row.nextElementSibling;
+                    if (nextRow && nextRow.classList.contains('bg-gray-50')) {
+                        nextRow.classList.toggle('hidden');
+                        expandBtn.style.transform = nextRow.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(90deg)';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
