@@ -1,0 +1,11 @@
+Role_Name,Approval_Limit_USD,Can_Approve_Corporate,Can_Approve_Retail,Can_Approve_SME,System_Access_Level,Can_Override_Policy,Can_Approve_Exceptions,Reports_To,Can_Delegate_Authority,Committee_Voting_Rights
+Senior Credit Officer,5000000,Yes,No,Yes,Standard,No,No,Head of Corporate Credit,Limited,No
+Head of Corporate Credit,25000000,Yes,No,Yes,Enhanced,Limited,Yes,Chief Credit Officer,Yes,No
+Head of Retail Credit,10000000,No,Yes,No,Enhanced,Limited,Yes,Chief Credit Officer,Yes,No
+Chief Credit Officer,100000000,Yes,Yes,Yes,Full,Yes,Yes,CEO,Yes,Yes
+Credit Committee Member,Unlimited,Yes,Yes,Yes,Full,Yes,Yes,Board,No,Yes
+Regional Credit Manager,2000000,Yes,No,Yes,Standard,No,No,Head of Corporate Credit,Limited,No
+Branch Credit Manager,500000,No,Yes,No,Limited,No,No,Head of Retail Credit,No,No
+Deputy Chief Credit Officer,50000000,Yes,Yes,Yes,Enhanced,Yes,Yes,Chief Credit Officer,Yes,Limited
+Head of SME Credit,15000000,No,No,Yes,Enhanced,Limited,Yes,Chief Credit Officer,Yes,No
+Senior Risk Analyst,0,No,No,No,Read-Only,No,No,Various,No,No
