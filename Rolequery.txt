@@ -1,0 +1,81 @@
+Here are sample queries to test the bot with varying complexity levels:
+
+## **Basic Role Information Queries**
+
+1. "What roles can approve corporate credit facilities?"
+
+2. "What is the approval limit for a Senior Credit Officer?"
+
+3. "Who does the Head of Retail Credit report to?"
+
+4. "Can a Branch Credit Manager approve corporate loans?"
+
+5. "What qualifications do I need to become a Chief Credit Officer?"
+
+## **Comparison and Decision-Making Queries**
+
+6. "I need to approve a $7 million corporate loan. What role do I need?"
+
+7. "What's the difference between Head of Corporate Credit and Head of Retail Credit?"
+
+8. "I have 6 years of credit analysis experience and want to move into management. Which roles should I consider?"
+
+9. "Which roles can override credit policy decisions?"
+
+10. "I want to work with small business lending. What roles should I look at?"
+
+## **Complex Scenario-Based Queries**
+
+11. "I'm currently a Senior Credit Officer and want to approve a $8 million SME loan. Can I do this myself or do I need to escalate?"
+
+12. "I have an MBA and 12 years of corporate banking experience. I want a role where I can approve large corporate deals and manage a team. What are my options?"
+
+13. "We have a retail credit application that needs policy exception approval. Who can approve this?"
+
+14. "I want to be involved in setting credit policies for the entire organization. Which roles have this responsibility?"
+
+15. "What's the career progression path from Senior Credit Officer to Chief Credit Officer?"
+
+## **Access and Permission Queries**
+
+16. "Which roles have full system access?"
+
+17. "Can a Regional Credit Manager delegate their approval authority?"
+
+18. "Who has voting rights in the Credit Committee?"
+
+19. "I need someone who can approve both corporate and retail credits above $20 million. Who should I contact?"
+
+20. "What's the minimum role needed to approve credit exceptions?"
+
+## **Edge Cases and Clarification Queries**
+
+21. "Can someone be both a Head of Corporate Credit and a Credit Committee Member?"
+
+22. "I see there's a Deputy Chief Credit Officer in the CSV but not in the descriptions. What does this role do?"
+
+23. "What happens if a credit application exceeds the Chief Credit Officer's limit?"
+
+24. "Are there any roles specifically for credit analysis without approval authority?"
+
+25. "I want to approve mortgages. Which role should I apply for?"
+
+## **Ambiguous Queries (Testing Bot's Clarification Skills)**
+
+26. "I want a senior role"
+
+27. "What's the best role for me?"
+
+28. "I need high access"
+
+29. "Which role makes the most money?" (Information not in files)
+
+30. "How many people are in each role?" (Information not in files)
+
+These queries test various aspects of the bot's functionality including:
+- Direct information retrieval
+- Comparison and analysis
+- Handling missing information
+- Making recommendations based on requirements
+- Understanding context and asking clarifying questions
+- Staying within the bounds of available documentation
